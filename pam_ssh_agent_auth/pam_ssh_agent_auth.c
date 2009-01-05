@@ -82,7 +82,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     pam_get_item(pamh, PAM_SERVICE, (const void **) &servicename);
     
     __progname = calloc(1,1024);
-    sprintf(__progname, "%s", servicename, (unsigned long int) getpid());
+    snprintf(__progname, 1024, "%s", servicename, (unsigned long int) getpid());
 #endif
 
     for (i=argc,v=(char **) argv; i > 0; ++v, i--) {
