@@ -100,7 +100,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     log_init(__progname, log_lvl, facility, 0);
     debug("Authorized keys file = %s", authorized_keys_file);
 
-    pam_get_user(pamh, &user, NULL);
+    pam_get_item(pamh, PAM_USER, &user);
     caller_uid = getpwnam(user)->pw_uid;
 
     if(find_authorized_keys(caller_uid)) {
