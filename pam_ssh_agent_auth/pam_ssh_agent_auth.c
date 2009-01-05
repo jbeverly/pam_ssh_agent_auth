@@ -111,6 +111,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
     free(__progname);
 #endif
+
     return retval;
 }
     
