@@ -1,0 +1,29 @@
+=head1 PAM_SSH_AGENT_AUTH
+
+This module provides authentication via ssh-agent. It takes only a single argument, file=/path/to/authorized_keys.
+If an ssh-agent listening at SSH_AUTH_SOCK can successfully authenticate that it has the secret key for a public key in the specified file, authentication is granted, otherwise authentication files
+
+=head1 EXAMPLE
+
+in /etc/pam.d/sudo:
+
+=over
+
+auth	sufficient	pam_ssh_agent_auth.so file=/etc/security/authorized_keys
+
+=back
+
+in /etc/sudoers:
+
+=over
+
+Defaults    env_keep += "SSH_AUTH_SOCK"
+
+=back
+
+
+This configuration would permit anyone who has an SSH_AUTH_SOCK that manages the private key matching a public key in /etc/security/authorized_keys to execute sudo without having to enter a password. Note that the ssh-agent listening to SSH_AUTH_SOCK can either be local, or forwarded. 
+
+Unlike NOPASSWD, this still requires an authentication, it's just that the authentication is provided by ssh-agent, and not password entry. 
+ 
+=cut
