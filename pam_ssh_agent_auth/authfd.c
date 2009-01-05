@@ -116,7 +116,7 @@ ssh_get_authentication_socket(uid_t uid)
     /* Advisory only; seteuid ensures no race condition; but will not log 8-( */
     if( stat(authsocket,&sock_st) == 0) {
         if(uid != 0 && sock_st.st_uid != uid) {
-            fatal("Uid %d attempted to open an agent socket owned by uid %d", uid, sock_st.st_uid);
+            fatal("uid %d attempted to open an agent socket owned by uid %d", (int) uid, (int) sock_st.st_uid);
             return -1;
         }
     }
@@ -148,7 +148,7 @@ ssh_get_authentication_socket(uid_t uid)
 	if (connect(sock, (struct sockaddr *)&sunaddr, sizeof sunaddr) < 0) {
 		close(sock);
         if(errno == EACCES)
-            fatal("MAJOR SECURITY WARNING: uid %d made a deliberate and malicious attempt to open an agent socket owned by uid %d", uid, sock_st.st_uid);
+            fatal("MAJOR SECURITY WARNING: uid %d made a deliberate and malicious attempt to open an agent socket owned by another user", (int) uid);
 		return -1;
 	}
 

@@ -79,10 +79,10 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
  */
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
     char * servicename;
-    pam_get_item(pamh, PAM_SERVICE, (const void **) &servicename);
+    pam_get_item(pamh, PAM_SERVICE, (void **) &servicename);
     
     __progname = calloc(1,1024);
-    snprintf(__progname, 1024, "%s", servicename, (unsigned long int) getpid());
+    snprintf(__progname, 1024, "%s", servicename);
 #endif
 
     for (i=argc,v=(char **) argv; i > 0; ++v, i--) {
