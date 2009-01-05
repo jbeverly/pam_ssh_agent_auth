@@ -64,7 +64,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     int retval = PAM_AUTH_ERR;
     uid_t caller_uid = 0;
     LogLevel log_lvl = SYSLOG_LEVEL_INFO;
-#ifdef LOG_AUTHPRIV
+#ifdef SYSLOG_FACILITY_AUTHPRIV
     SyslogFacility facility = SYSLOG_FACILITY_AUTHPRIV;
 #else
     SyslogFacility facility = SYSLOG_FACILITY_AUTH;
@@ -88,7 +88,6 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     for (i=argc,v=(char **) argv; i > 0; ++v, i--) {
         if (strncasecmp(*v, "debug", strlen("debug")) == 0) {
             log_lvl = SYSLOG_LEVEL_DEBUG3;
-            facility = SYSLOG_FACILITY_AUTHPRIV;
         }
         if (strncasecmp(*v, "file=", strlen("file=")) == 0) {
             authorized_keys_file = *v+strlen("file=");
@@ -109,6 +108,9 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
         retval = PAM_SUCCESS;
     }
 
+#if ! HAVE___PROGNAME || HAVE_BUNDLE
+    free(__progname);
+#endif
     return retval;
 }
     
