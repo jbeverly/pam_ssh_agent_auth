@@ -113,7 +113,7 @@ ssh_get_authentication_socket(uid_t uid)
 	if (!authsocket)
 		return -1;
 
-    /* Advisory only; seteuid ensures no race condition; but will not log 8-( */
+    /* Advisory only; seteuid ensures no race condition; but will only log if we see EACCES */
     if( stat(authsocket,&sock_st) == 0) {
         if(uid != 0 && sock_st.st_uid != uid) {
             fatal("uid %d attempted to open an agent socket owned by uid %d", (int) uid, (int) sock_st.st_uid);

@@ -101,11 +101,17 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     debug("Authorized keys file = %s", authorized_keys_file);
 
     pam_get_item(pamh, PAM_USER, (void *) &user);
-    caller_uid = getpwnam(user)->pw_uid;
+    /* 
+     * PAM_USER does not necessarily have to get set by the calling application. 
+     * In those cases we should silently fail 
+     */
+    if(user) {
+        caller_uid = getpwnam(user)->pw_uid;
 
-    if(find_authorized_keys(caller_uid)) {
-        logit("Authenticated: user %s via ssh-agent using %s", user, authorized_keys_file);
-        retval = PAM_SUCCESS;
+        if(find_authorized_keys(caller_uid)) {
+            logit("Authenticated: user %s via ssh-agent using %s", user, authorized_keys_file);
+            retval = PAM_SUCCESS;
+        }
     }
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
