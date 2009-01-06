@@ -79,7 +79,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
  */
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
     char * servicename;
-    pam_get_item(pamh, PAM_SERVICE, (void **) &servicename);
+    pam_get_item(pamh, PAM_SERVICE, (void *) &servicename);
     
     __progname = calloc(1,1024);
     snprintf(__progname, 1024, "%s", servicename);
@@ -100,7 +100,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     log_init(__progname, log_lvl, facility, 0);
     debug("Authorized keys file = %s", authorized_keys_file);
 
-    pam_get_item(pamh, PAM_USER, (void **) &user);
+    pam_get_item(pamh, PAM_USER, (void *) &user);
     caller_uid = getpwnam(user)->pw_uid;
 
     if(find_authorized_keys(caller_uid)) {

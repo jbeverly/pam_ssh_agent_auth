@@ -172,6 +172,7 @@ key_equal(const Key *a, const Key *b)
 	default:
 		fatal("key_equal: bad key type %d", a->type);
 	}
+    return -1; /* avoid compiler warning */
 }
 
 u_char*
