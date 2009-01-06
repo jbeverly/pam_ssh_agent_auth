@@ -32,6 +32,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+ /* 
+  * My single line "return -1; / * avoid compiler warning * / is licensed 
+  * under same BSD style license as the remainder of this file. 
+  * Feel free to use it for any purpose... ... ... Jamie Beverly ... ... ... 
+  */
 
 #include "includes.h"
 
