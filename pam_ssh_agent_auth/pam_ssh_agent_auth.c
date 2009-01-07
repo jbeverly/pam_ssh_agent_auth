@@ -45,6 +45,7 @@
 #include "includes.h"
 #include "log.h"
 #include "ssh.h"
+#include "pam_static_macros.h"
 
 char * authorized_keys_file = NULL;
 
