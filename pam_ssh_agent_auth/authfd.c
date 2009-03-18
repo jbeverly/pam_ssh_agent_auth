@@ -143,6 +143,7 @@ ssh_get_authentication_socket(uid_t uid)
 		return -1;
 	}
 
+    errno = 0; 
     seteuid(uid); /* To ensure a race condition is not used to circumvent the stat
                      above, we will temporarily drop UID to the caller */
 	if (connect(sock, (struct sockaddr *)&sunaddr, sizeof sunaddr) < 0) {

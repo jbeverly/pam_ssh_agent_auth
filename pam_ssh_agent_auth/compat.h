@@ -66,5 +66,5 @@ char	*compat_cipher_proposal(char *);
 
 extern int compat13;
 extern int compat20;
-extern int datafellows;
+int datafellows = 0;
 #endif
