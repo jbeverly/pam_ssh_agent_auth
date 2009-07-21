@@ -83,7 +83,7 @@ solaris_contract_pre_fork(void)
 		return;
 	}
 
-	debug2("%s: setting up process contract template on fd %d",
+	verbose("%s: setting up process contract template on fd %d",
 	    __func__, tmpl_fd);
 
 	/* First we set the template parameters and event sets. */
@@ -126,7 +126,7 @@ solaris_contract_pre_fork(void)
 void
 solaris_contract_post_fork_child()
 {
-	debug2("%s: clearing process contract template on fd %d",
+	verbose("%s: clearing process contract template on fd %d",
 	    __func__, tmpl_fd);
 
 	/* Clear the active template. */
@@ -145,7 +145,7 @@ solaris_contract_post_fork_parent(pid_t pid)
 	char ctl_path[256];
 	int r, ctl_fd = -1, stat_fd = -1;
 
-	debug2("%s: clearing template (fd %d)", __func__, tmpl_fd);
+	verbose("%s: clearing template (fd %d)", __func__, tmpl_fd);
 
 	if (tmpl_fd == -1)
 		return;
@@ -169,7 +169,7 @@ solaris_contract_post_fork_parent(pid_t pid)
 	/* Now lookup and abandon the contract we've created. */
 	ctid = get_active_process_contract_id();
 
-	debug2("%s: abandoning contract id %ld", __func__, ctid);
+	verbose("%s: abandoning contract id %ld", __func__, ctid);
 
 	snprintf(ctl_path, sizeof(ctl_path),
 	    CTFS_ROOT "/process/%ld/ctl", ctid);

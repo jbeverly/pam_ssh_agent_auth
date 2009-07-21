@@ -179,7 +179,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 
 	DSA_SIG_free(sig);
 
-	debug("ssh_dss_verify: signature %s",
+	verbose("ssh_dss_verify: signature %s",
 	    ret == 1 ? "correct" : ret == 0 ? "incorrect" : "error");
 	return ret;
 }

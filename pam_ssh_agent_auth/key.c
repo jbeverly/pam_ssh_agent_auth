@@ -420,26 +420,26 @@ key_read(Key *ret, char **cpp)
 	case KEY_DSA:
 		space = strchr(cp, ' ');
 		if (space == NULL) {
-			debug3("key_read: missing whitespace");
+			verbose("key_read: missing whitespace");
 			return -1;
 		}
 		*space = '\0';
 		type = key_type_from_name(cp);
 		*space = ' ';
 		if (type == KEY_UNSPEC) {
-			debug3("key_read: missing keytype");
+			verbose("key_read: missing keytype");
 			return -1;
 		}
 		cp = space+1;
 		if (*cp == '\0') {
-			debug3("key_read: short string");
+			verbose("key_read: short string");
 			return -1;
 		}
 		if (ret->type == KEY_UNSPEC) {
 			ret->type = type;
 		} else if (ret->type != type) {
 			/* is a key, but different type */
-			debug3("key_read: type mismatch");
+			verbose("key_read: type mismatch");
 			return -1;
 		}
 		len = 2*strlen(cp);
@@ -656,7 +656,7 @@ key_type_from_name(char *name)
 	} else if (strcmp(name, "ssh-dss") == 0) {
 		return KEY_DSA;
 	}
-	debug2("key_type_from_name: unknown key type '%s'", name);
+	verbose("key_type_from_name: unknown key type '%s'", name);
 	return KEY_UNSPEC;
 }
 
@@ -677,7 +677,7 @@ key_names_valid2(const char *names)
 			return 0;
 		}
 	}
-	debug3("key names ok: [%s]", names);
+	verbose("key names ok: [%s]", names);
 	xfree(s);
 	return 1;
 }

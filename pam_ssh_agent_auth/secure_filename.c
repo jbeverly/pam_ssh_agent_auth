@@ -143,7 +143,7 @@ secure_filename(FILE *f, const char *file, struct passwd *pw,
 		}
 		strlcpy(buf, cp, sizeof(buf));
 
-		debug3("secure_filename: checking '%s'", buf);
+		verbose("secure_filename: checking '%s'", buf);
 		if (stat(buf, &st) < 0 ||
 		    (st.st_uid != 0 && st.st_uid != uid) ||
 		    (st.st_mode & 022) != 0) {
@@ -154,7 +154,7 @@ secure_filename(FILE *f, const char *file, struct passwd *pw,
 
 		/* If are passed the homedir then we can stop */
 		if (comparehome && strcmp(homedir, buf) == 0) {
-			debug3("secure_filename: terminating check at '%s'",
+			verbose("secure_filename: terminating check at '%s'",
 			    buf);
 			break;
 		}

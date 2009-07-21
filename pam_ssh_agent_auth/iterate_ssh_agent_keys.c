@@ -70,7 +70,7 @@ find_authorized_keys(uid_t uid)
     session_id2 = session_id2_gen(&session_id2_len);
 
     if ((ac = ssh_get_authentication_connection(uid))) {
-        debug("Contacted ssh-agent");
+        verbose("Contacted ssh-agent");
         for (key = ssh_get_first_identity(ac, &comment, 2); key != NULL; key = ssh_get_next_identity(ac, &comment, 2)) 
         {
             if(key != NULL) {
@@ -91,7 +91,7 @@ find_authorized_keys(uid_t uid)
         ssh_close_authentication_connection(ac);
     }
     else {
-        debug("No ssh-agent could be contacted");
+        verbose("No ssh-agent could be contacted");
     }
     xfree(session_id2);
     EVP_cleanup();

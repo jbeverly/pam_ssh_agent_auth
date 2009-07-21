@@ -147,7 +147,7 @@ setproctitle(const char *fmt, ...)
 	pst.pst_command = buf;
 	pstat(PSTAT_SETCMD, pst, strlen(buf), 0, 0);
 #elif SPT_TYPE == SPT_REUSEARGV
-/*	debug("setproctitle: copy \"%s\" into len %d", 
+/*	verbose("setproctitle: copy \"%s\" into len %d", 
 	    buf, argv_env_len); */
 	len = strlcpy(argv_start, buf, argv_env_len);
 	for(; len < argv_env_len; len++)

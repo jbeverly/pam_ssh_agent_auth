@@ -82,7 +82,7 @@ aix_usrinfo(struct passwd *pw)
 	    pw->pw_name, '\0');
 	if (usrinfo(SETUINFO, cp, i) == -1)
 		fatal("Couldn't set usrinfo: %s", strerror(errno));
-	debug3("AIX/UsrInfo: set len %d", i);
+	verbose("AIX/UsrInfo: set len %d", i);
 
 	xfree(cp);
 }
@@ -136,7 +136,7 @@ aix_valid_authentications(const char *user)
 		return 0;
 	}
 
-	debug3("AIX SYSTEM attribute %s", sys);
+	verbose("AIX SYSTEM attribute %s", sys);
 	if (strcmp(sys, "NONE") != 0)
 		return 1;	/* not "NONE", so is OK */
 
@@ -149,7 +149,7 @@ aix_valid_authentications(const char *user)
 	p = auth1;
 	/* A SEC_LIST is concatenated strings, ending with two NULs. */
 	while (p[0] != '\0' && p[1] != '\0') {
-		debug3("AIX auth1 attribute list member %s", p);
+		verbose("AIX auth1 attribute list member %s", p);
 		if (strcmp(p, "NONE") != 0 && strcmp(p, "SYSTEM")) {
 			logit("Account %s has unsupported auth1 value '%s'",
 			    user, p);
@@ -178,7 +178,7 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 		result = authenticate((char *)name, (char *)password, &reenter,
 		    &authmsg);
 		aix_remove_embedded_newlines(authmsg);	
-		debug3("AIX/authenticate result %d, authmsg %.100s", result,
+		verbose("AIX/authenticate result %d, authmsg %.100s", result,
 		    authmsg);
 	} while (reenter);
 
@@ -202,7 +202,7 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 			buffer_append(ctxt->loginmsg, msg, strlen(msg));
 			aix_remove_embedded_newlines(msg);
 		}
-		debug3("AIX/passwdexpired returned %d msg %.100s", expired, msg);
+		verbose("AIX/passwdexpired returned %d msg %.100s", expired, msg);
 
 		switch (expired) {
 		case 0: /* password not expired */
@@ -244,7 +244,7 @@ sys_auth_allowed_user(struct passwd *pw, Buffer *loginmsg)
 	 * loginrestrictions will always fail due to insufficient privilege).
 	 */
 	if (pw->pw_uid == 0 || geteuid() != 0) {
-		debug3("%s: not checking", __func__);
+		verbose("%s: not checking", __func__);
 		return 1;
 	}
 
@@ -263,7 +263,7 @@ sys_auth_allowed_user(struct passwd *pw, Buffer *loginmsg)
 	if (msg == NULL)
 		msg = xstrdup("(none)");
 	aix_remove_embedded_newlines(msg);
-	debug3("AIX/loginrestrictions returned %d msg %.100s", result, msg);
+	verbose("AIX/loginrestrictions returned %d msg %.100s", result, msg);
 
 	if (!permitted)
 		logit("Login restricted for %s: %.100s", pw->pw_name, msg);
@@ -283,7 +283,7 @@ sys_auth_record_login(const char *user, const char *host, const char *ttynm,
 	if (loginsuccess((char *)user, (char *)host, (char *)ttynm, &msg) == 0) {
 		success = 1;
 		if (msg != NULL && loginmsg != NULL && !msg_done) {
-			debug("AIX/loginsuccess: msg %s", msg);
+			verbose("AIX/loginsuccess: msg %s", msg);
 			buffer_append(loginmsg, msg, strlen(msg));
 			xfree(msg);
 			msg_done = 1;
@@ -327,18 +327,18 @@ aix_setauthdb(const char *user)
 	char *registry;
 
 	if (setuserdb(S_READ) == -1) {
-		debug3("%s: Could not open userdb to read", __func__);
+		verbose("%s: Could not open userdb to read", __func__);
 		return;
 	}
 	
 	if (getuserattr((char *)user, S_REGISTRY, &registry, SEC_CHAR) == 0) {
 		if (setauthdb(registry, old_registry) == 0)
-			debug3("AIX/setauthdb set registry '%s'", registry);
+			verbose("AIX/setauthdb set registry '%s'", registry);
 		else 
-			debug3("AIX/setauthdb set registry '%s' failed: %s",
+			verbose("AIX/setauthdb set registry '%s' failed: %s",
 			    registry, strerror(errno));
 	} else
-		debug3("%s: Could not read S_REGISTRY for user: %s", __func__,
+		verbose("%s: Could not read S_REGISTRY for user: %s", __func__,
 		    strerror(errno));
 	enduserdb();
 #  endif /* HAVE_SETAUTHDB */
@@ -355,10 +355,10 @@ aix_restoreauthdb(void)
 {
 #  ifdef HAVE_SETAUTHDB
 	if (setauthdb(old_registry, NULL) == 0)
-		debug3("%s: restoring old registry '%s'", __func__,
+		verbose("%s: restoring old registry '%s'", __func__,
 		    old_registry);
 	else
-		debug3("%s: failed to restore old registry %s", __func__,
+		verbose("%s: failed to restore old registry %s", __func__,
 		    old_registry);
 #  endif /* HAVE_SETAUTHDB */
 }

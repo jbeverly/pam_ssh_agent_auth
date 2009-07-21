@@ -84,13 +84,13 @@ set_nonblock(int fd)
 		return (-1);
 	}
 	if (val & O_NONBLOCK) {
-		debug3("fd %d is O_NONBLOCK", fd);
+		verbose("fd %d is O_NONBLOCK", fd);
 		return (0);
 	}
-	debug2("fd %d setting O_NONBLOCK", fd);
+	verbose("fd %d setting O_NONBLOCK", fd);
 	val |= O_NONBLOCK;
 	if (fcntl(fd, F_SETFL, val) == -1) {
-		debug("fcntl(%d, F_SETFL, O_NONBLOCK): %s", fd,
+		verbose("fcntl(%d, F_SETFL, O_NONBLOCK): %s", fd,
 		    strerror(errno));
 		return (-1);
 	}
@@ -108,13 +108,13 @@ unset_nonblock(int fd)
 		return (-1);
 	}
 	if (!(val & O_NONBLOCK)) {
-		debug3("fd %d is not O_NONBLOCK", fd);
+		verbose("fd %d is not O_NONBLOCK", fd);
 		return (0);
 	}
-	debug("fd %d clearing O_NONBLOCK", fd);
+	verbose("fd %d clearing O_NONBLOCK", fd);
 	val &= ~O_NONBLOCK;
 	if (fcntl(fd, F_SETFL, val) == -1) {
-		debug("fcntl(%d, F_SETFL, ~O_NONBLOCK): %s",
+		verbose("fcntl(%d, F_SETFL, ~O_NONBLOCK): %s",
 		    fd, strerror(errno));
 		return (-1);
 	}
@@ -138,15 +138,15 @@ set_nodelay(int fd)
 
 	optlen = sizeof opt;
 	if (getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, &optlen) == -1) {
-		debug("getsockopt TCP_NODELAY: %.100s", strerror(errno));
+		verbose("getsockopt TCP_NODELAY: %.100s", strerror(errno));
 		return;
 	}
 	if (opt == 1) {
-		debug2("fd %d is TCP_NODELAY", fd);
+		verbose("fd %d is TCP_NODELAY", fd);
 		return;
 	}
 	opt = 1;
-	debug2("fd %d setting TCP_NODELAY", fd);
+	verbose("fd %d setting TCP_NODELAY", fd);
 	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof opt) == -1)
 		logerror("setsockopt TCP_NODELAY: %.100s", strerror(errno));
 }
@@ -367,7 +367,7 @@ put_host_port(const char *host, u_short port)
 		return(xstrdup(host));
 	if (asprintf(&hoststr, "[%s]:%d", host, (int)port) < 0)
 		fatal("put_host_port: asprintf: %s", strerror(errno));
-	debug3("put_host_port: %s", hoststr);
+	verbose("put_host_port: %s", hoststr);
 	return hoststr;
 }
 
@@ -631,7 +631,7 @@ read_keyfile_line(FILE *f, const char *filename, char *buf, size_t bufsz,
 		if (buf[strlen(buf) - 1] == '\n' || feof(f)) {
 			return 0;
 		} else {
-			debug("%s: %s line %lu exceeds size limit", __func__,
+			verbose("%s: %s line %lu exceeds size limit", __func__,
 			    filename, *lineno);
 			/* discard remainder of line */
 			while (fgetc(f) != '\n' && !feof(f))
@@ -662,16 +662,16 @@ tun_open(int tun, int mode)
 				break;
 		}
 	} else {
-		debug("%s: invalid tunnel %u", __func__, tun);
+		verbose("%s: invalid tunnel %u", __func__, tun);
 		return (-1);
 	}
 
 	if (fd < 0) {
-		debug("%s: %s open failed: %s", __func__, name, strerror(errno));
+		verbose("%s: %s open failed: %s", __func__, name, strerror(errno));
 		return (-1);
 	}
 
-	debug("%s: %s mode %d fd %d", __func__, name, mode, fd);
+	verbose("%s: %s mode %d fd %d", __func__, name, mode, fd);
 
 	/* Set the tunnel device operation mode */
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "tun%d", tun);
@@ -703,7 +703,7 @@ tun_open(int tun, int mode)
 		close(fd);
 	if (sock >= 0)
 		close(sock);
-	debug("%s: failed to set %s mode %d: %s", __func__, name,
+	verbose("%s: failed to set %s mode %d: %s", __func__, name,
 	    mode, strerror(errno));
 	return (-1);
 #else

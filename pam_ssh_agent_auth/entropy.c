@@ -57,7 +57,7 @@
  * /dev/random), then we execute a "ssh-rand-helper" program which
  * collects entropy and writes it to stdout. The child program must
  * write at least RANDOM_SEED_SIZE bytes. The child is run with stderr
- * attached, so error/debugging output should be visible.
+ * attached, so error/verboseging output should be visible.
  *
  * XXX: we should tell the child how many bytes we need.
  */
@@ -79,11 +79,11 @@ seed_rng(void)
 	mysig_t old_sigchld;
 
 	if (RAND_status() == 1) {
-		debug3("RNG is ready, skipping seeding");
+		verbose("RNG is ready, skipping seeding");
 		return;
 	}
 
-	debug3("Seeding PRNG from %s", SSH_RAND_HELPER);
+	verbose("Seeding PRNG from %s", SSH_RAND_HELPER);
 
 	if ((devnull = open("/dev/null", O_RDWR)) == -1)
 		fatal("Couldn't open /dev/null: %s", strerror(errno));
@@ -187,7 +187,7 @@ rexec_recv_rng_seed(Buffer *m)
 
 	buf = buffer_get_string_ret(m, &len);
 	if (buf != NULL) {
-		debug3("rexec_recv_rng_seed: seeding rng with %u bytes", len);
+		verbose("rexec_recv_rng_seed: seeding rng with %u bytes", len);
 		RAND_add(buf, len, len);
 	}
 }

@@ -29,7 +29,7 @@
  *
  *   Transport layer protocol:
  *
- *     1-19     Transport layer generic (e.g. disconnect, ignore, debug,
+ *     1-19     Transport layer generic (e.g. disconnect, ignore, verbose,
  *              etc)
  *     20-29    Algorithm negotiation
  *     30-49    Key exchange method specific (numbers can be reused for

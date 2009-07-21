@@ -43,7 +43,7 @@ ssh_selinux_enabled(void)
 
 	if (enabled == -1) {
 		enabled = is_selinux_enabled();
-		debug("SELinux support %s", enabled ? "enabled" : "disabled");
+		verbose("SELinux support %s", enabled ? "enabled" : "disabled");
 	}
 
 	return (enabled);
@@ -106,7 +106,7 @@ ssh_selinux_setup_exec_context(char *pwname)
 	if (!ssh_selinux_enabled())
 		return;
 
-	debug3("%s: setting execution context", __func__);
+	verbose("%s: setting execution context", __func__);
 
 	user_ctx = ssh_selinux_getctxbyname(pwname);
 	if (setexeccon(user_ctx) != 0) {
@@ -125,7 +125,7 @@ ssh_selinux_setup_exec_context(char *pwname)
 	if (user_ctx != NULL)
 		freecon(user_ctx);
 
-	debug3("%s: done", __func__);
+	verbose("%s: done", __func__);
 }
 
 /* Set the TTY context for the specified user */
@@ -139,7 +139,7 @@ ssh_selinux_setup_pty(char *pwname, const char *tty)
 	if (!ssh_selinux_enabled())
 		return;
 
-	debug3("%s: setting TTY context on %s", __func__, tty);
+	verbose("%s: setting TTY context on %s", __func__, tty);
 
 	user_ctx = ssh_selinux_getctxbyname(pwname);
 
@@ -166,6 +166,6 @@ ssh_selinux_setup_pty(char *pwname, const char *tty)
 		freecon(old_tty_ctx);
 	if (user_ctx != NULL)
 		freecon(user_ctx);
-	debug3("%s: done", __func__);
+	verbose("%s: done", __func__);
 }
 #endif /* WITH_SELINUX */

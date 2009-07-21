@@ -75,7 +75,7 @@ ssh_rsa_sign(const Key *key, u_char **sigp, u_int *lenp,
 	}
 	if (len < slen) {
 		u_int diff = slen - len;
-		debug("slen %u > len %u", slen, len);
+		verbose("slen %u > len %u", slen, len);
 		memmove(sig + diff, sig, len);
 		memset(sig, 0, diff);
 	} else if (len > slen) {
@@ -148,7 +148,7 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		return -1;
 	} else if (len < modlen) {
 		u_int diff = modlen - len;
-		debug("ssh_rsa_verify: add padding: modlen %u > len %u",
+		verbose("ssh_rsa_verify: add padding: modlen %u > len %u",
 		    modlen, len);
 		sigblob = xrealloc(sigblob, 1, modlen);
 		memmove(sigblob + diff, sigblob, len);
@@ -169,7 +169,7 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	memset(digest, 'd', sizeof(digest));
 	memset(sigblob, 's', len);
 	xfree(sigblob);
-	debug("ssh_rsa_verify: signature %scorrect", (ret==0) ? "in" : "");
+	verbose("ssh_rsa_verify: signature %scorrect", (ret==0) ? "in" : "");
 	return ret;
 }
 

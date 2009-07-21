@@ -70,7 +70,7 @@ irix_setusercontext(struct passwd *pw)
 #ifdef WITH_IRIX_PROJECT
         /* initialize irix project info */
         if ((projid = getdfltprojuser(pw->pw_name)) == -1) {
-                debug("Failed to get project id, using projid 0");
+                verbose("Failed to get project id, using projid 0");
                 projid = 0;
         }
         if (setprid(projid))
@@ -79,9 +79,9 @@ irix_setusercontext(struct passwd *pw)
 #endif /* WITH_IRIX_PROJECT */
 #ifdef WITH_IRIX_AUDIT
         if (sysconf(_SC_AUDIT)) {
-                debug("Setting sat id to %d", (int) pw->pw_uid);
+                verbose("Setting sat id to %d", (int) pw->pw_uid);
                 if (satsetid(pw->pw_uid))
-                        debug("error setting satid: %.100s", strerror(errno));
+                        verbose("error setting satid: %.100s", strerror(errno));
         }
 #endif /* WITH_IRIX_AUDIT */
 }
