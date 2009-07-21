@@ -55,6 +55,25 @@ else
 	AC_SUBST(STARTUP_SCRIPT_SHELL,/bin/sh)
 fi
 
+# Check functions
+AC_FUNC_CHOWN
+AC_FUNC_CLOSEDIR_VOID
+AC_FUNC_FORK
+AC_PROG_GCC_TRADITIONAL
+AC_FUNC_LSTAT
+AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
+AC_FUNC_MALLOC
+AC_FUNC_MEMCMP
+AC_FUNC_MMAP
+AC_FUNC_REALLOC
+AC_FUNC_SELECT_ARGTYPES
+AC_TYPE_SIGNAL
+AC_FUNC_STAT
+AC_FUNC_STRNLEN
+AC_FUNC_UTIME_NULL
+AC_CHECK_FUNCS([dup2 endgrent ftruncate getcwd gethostbyaddr gethostbyname getpass getspnam gettimeofday inet_ntoa isascii memmove memset mkdir realpath rmdir select setenv socket strcasecmp strchr strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol strtoul uname utime])
+
+
 # System features
 AC_SYS_LARGEFILE
 
