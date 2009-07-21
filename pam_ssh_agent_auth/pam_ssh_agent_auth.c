@@ -15,6 +15,20 @@
  * You should have received a copy of the GNU General Public License along 
  * with this program; if not, write to the Free Software Foundation, Inc., 
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ *
+ * In addition, as a special exception, the copyright holders give
+ * permission to link the code of portions of this program with the
+ * OpenSSL library under certain conditions as described in each
+ * individual source file, and distribute linked combinations
+ * including the two.
+ * You must obey the GNU General Public License in all respects
+ * for all of the code used other than OpenSSL.  If you modify
+ * file(s) with this exception, you may extend this exception to your
+ * version of the file(s), but you are not obligated to do so.  If you
+ * do not wish to do so, delete this exception statement from your
+ * version.  If you delete this exception statement from all source
+ * files in the program, then also delete it here.
  */
 
 #include "config.h"
@@ -46,9 +60,12 @@
 #include "log.h"
 #include "ssh.h"
 #include "pam_static_macros.h"
-#include "secure_filename.h"
+//#include "secure_filename.h"
+#include "pam_user_authorized_keys.h"
+
 
 char * authorized_keys_file = NULL;
+uint8_t allow_user_owned_authorized_keys_file = 0;
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
 char * __progname;
@@ -100,6 +117,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     log_init(__progname, log_lvl, facility, 0);
     pam_get_item(pamh, PAM_USER, (void *) &user);
 
+    allow_user_owned_authorized_keys_file = 0;
     if(authorized_keys_file_input && user) {
         authorized_key_file_translate( user, authorized_keys_file_input );
     }

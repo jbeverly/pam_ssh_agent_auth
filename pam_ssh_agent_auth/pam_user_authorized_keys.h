@@ -31,9 +31,11 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef _ITERATE_SSH_AGENT_KEYS_H
-#define _ITERATE_SSH_AGENT_KEYS_H
+#ifndef _PAM_USER_KEY_ALLOWED_H
+#define _PAM_USER_KEY_ALLOWED_H
 
-int find_authorized_keys(uid_t);
+#include "identity.h"
+int pam_user_key_allowed(Key *, uid_t);
+void authorized_key_file_translate(const char *, const char *);
 
 #endif

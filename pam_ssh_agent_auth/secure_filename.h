@@ -28,7 +28,5 @@
 #define _SECURE_FILENAME_H
 #include <pwd.h>
 #include <stdio.h>
-
-void authorized_key_file_translate(const char *, const char *);
 int secure_filename(FILE *, const char *, struct passwd *, char *, size_t);
 #endif
