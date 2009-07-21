@@ -57,6 +57,44 @@
 #include "key.h"
 #include "misc.h"
 
+extern char * authorized_keys_file;
+void
+authorized_key_file_translate(const char * user, const char * authorized_keys_file_input)
+{
+    size_t authorized_keys_file_len = 0;
+    size_t homedir_len = 0;
+    char * index_ptr = NULL;
+    size_t offset;
+
+#if HAVE__STRNLEN
+    authorized_keys_file_len = strnlen( authorized_keys_file_input, 1024 );
+    homedir_len = strnlen( getpwnam(user)->pw_dir, 1024 );
+#else
+    authorized_keys_file_len = strlen(authorized_keys_file_input);
+    homedir_len = strlen( getpwnam(user)->pw_dir );
+#endif
+
+    index_ptr = strstr(authorized_keys_file_input, "%h");
+    if(index_ptr)
+        authorized_keys_file_len += homedir_len;
+
+    authorized_keys_file = calloc(1,authorized_keys_file_len + 1);
+
+    if(index_ptr) {
+        offset = (size_t) ( index_ptr - authorized_keys_file_input );
+
+        if(offset > 0)
+            memcpy(authorized_keys_file, authorized_keys_file_input, offset);
+
+        memcpy(authorized_keys_file + offset, getpwnam(user)->pw_dir, homedir_len);
+        strncpy(authorized_keys_file + offset + homedir_len, authorized_keys_file_input + offset + 2, authorized_keys_file_len - homedir_len - offset - 2);
+    }
+    else {
+        strncpy(authorized_keys_file, authorized_keys_file_input, authorized_keys_file_len);
+    }
+}
+
+
 
 /*
  * Check a given file for security. This is defined as all components

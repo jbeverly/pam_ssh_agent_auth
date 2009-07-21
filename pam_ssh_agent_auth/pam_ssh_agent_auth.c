@@ -55,7 +55,6 @@ char * __progname;
 extern char * __progname;
 #endif
 
-
 PAM_EXTERN int 
 pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) 
 {
@@ -63,6 +62,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     char ** v; 
     int i = 0;
     int retval = PAM_AUTH_ERR;
+    char * authorized_keys_file_input = NULL;
     uid_t caller_uid = 0;
     LogLevel log_lvl = SYSLOG_LEVEL_INFO;
 #ifdef SYSLOG_FACILITY_AUTHPRIV
@@ -71,7 +71,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     SyslogFacility facility = SYSLOG_FACILITY_AUTH;
 #endif
 
-/* 
+/*
+ * XXX: 
  * When testing on MacOS (and I presume them same would be true on other a.out systems)
  * I tried '-undefined supress -flat_namespace', but then rather than compilation errors, I
  * received dl_open errors about the unresolvable symbol. So I just made my own symbol, and it 
@@ -83,30 +84,39 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
     pam_get_item(pamh, PAM_SERVICE, (void *) &servicename);
     
     __progname = calloc(1,1024);
-    snprintf(__progname, 1024, "%s", servicename);
+    strncpy(__prognam,servicename,1024);
 #endif
 
     for (i=argc,v=(char **) argv; i > 0; ++v, i--) {
         if (strncasecmp(*v, "debug", strlen("debug")) == 0) {
             log_lvl = SYSLOG_LEVEL_DEBUG3;
         }
-        if (strncasecmp(*v, "file=", strlen("file=")) == 0) {
-            authorized_keys_file = *v+strlen("file=");
+        if ( strncasecmp(*v, "file=", strlen("file=")) == 0 ) {
+            authorized_keys_file_input = *v+strlen("file=");
         }
     }
 
-    if(! authorized_keys_file) 
-        authorized_keys_file = "/etc/security/authorized_keys";
 
     log_init(__progname, log_lvl, facility, 0);
-    debug("Authorized keys file = %s", authorized_keys_file);
-
     pam_get_item(pamh, PAM_USER, (void *) &user);
-    /* 
-     * PAM_USER does not necessarily have to get set by the calling application. 
-     * In those cases we should silently fail 
-     */
+
+    if(authorized_keys_file_input && user) {
+        authorized_key_file_translate( user, authorized_keys_file_input );
+    }
+    else {
+        verbose("Using default file=/etc/security/authorized_keys");
+        authorized_keys_file = calloc(1,strlen("/etc/security/authorized_keys") + 1);
+        strcpy(authorized_keys_file, "/etc/security/authorized_keys");
+    }
+
     if(user) {
+        verbose("Authorized keys file = %s", authorized_keys_file);
+
+        /* 
+         * PAM_USER does not necessarily have to get set by the calling application. 
+         * In those cases we should silently fail 
+         */
+
         caller_uid = getpwnam(user)->pw_uid;
 
         if(find_authorized_keys(caller_uid)) {
@@ -114,10 +124,15 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
             retval = PAM_SUCCESS;
         }
     }
+    else {
+        logit("No user specified, cannot continue with this form of authentication");
+    }
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
     free(__progname);
 #endif
+
+    free(authorized_keys_file);
 
     return retval;
 }

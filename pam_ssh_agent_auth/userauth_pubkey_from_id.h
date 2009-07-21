@@ -21,6 +21,6 @@
 #define _USERAUTH_PUBKEY_FROM_ID_H
 
 #include <identity.h>
-int userauth_pubkey_from_id(Identity *);
+int userauth_pubkey_from_id(Identity *, uid_t);
 
 #endif

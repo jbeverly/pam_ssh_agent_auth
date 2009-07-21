@@ -78,7 +78,7 @@ find_authorized_keys(uid_t uid)
                 id->key = key;
                 id->filename = comment;
                 id->ac = ac;
-                if(userauth_pubkey_from_id(id)) {
+                if(userauth_pubkey_from_id(id,uid)) {
                     retval = 1;
                 }
                 xfree(id->filename);

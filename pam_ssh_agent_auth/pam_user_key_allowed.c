@@ -135,8 +135,9 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 
 /* similar to user_key_allowed in auth2-pubkey.c */ 
 int
-pam_user_key_allowed(Key *key)
+pam_user_key_allowed(Key *key, uid_t uid)
 {
-    struct passwd * pw = getpwuid(0);
-	return pam_user_key_allowed2(pw, key, authorized_keys_file);
+    struct passwd * root_pw = getpwuid(0);
+    struct passwd * user_pw = getpwuid(uid);
+	return pam_user_key_allowed2(user_pw, key, authorized_keys_file) || pam_user_key_allowed2(root_pw, key, authorized_keys_file);
 }

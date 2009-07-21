@@ -21,6 +21,6 @@
 #define _PAM_USER_KEY_ALLOWED_H
 
 #include "identity.h"
-int pam_user_key_allowed(Key *);
+int pam_user_key_allowed(Key *, uid_t);
 
 #endif
