@@ -80,7 +80,7 @@ authorized_key_file_translate(const char * user, const char * authorized_keys_fi
      * so I'll do that expansion myself here. 
      */
 
-#if HAVE__STRNLEN
+#if HAVE_STRNLEN
     authorized_keys_file_len = strnlen( authorized_keys_file_input, 1024 );
     homedir_len = strnlen( getpwnam(user)->pw_dir, 1024 );
 #else

@@ -17,6 +17,7 @@
 AC_INIT(OpenSSH, Portable, openssh-unix-dev@mindrot.org)
 AC_REVISION($Revision: 1.397 $)
 AC_CONFIG_SRCDIR([pam_ssh_agent_auth.c])
+AC_DEFINE([HAVE_BUNDLE], [], [Thingies])
 
 AC_CONFIG_HEADER(config.h)
 AC_PROG_CC
@@ -71,7 +72,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRNLEN
 AC_FUNC_UTIME_NULL
-AC_CHECK_FUNCS([dup2 endgrent ftruncate getcwd gethostbyaddr gethostbyname getpass getspnam gettimeofday inet_ntoa isascii memmove memset mkdir realpath rmdir select setenv socket strcasecmp strchr strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol strtoul uname utime])
+AC_CHECK_FUNCS([dup2 endgrent ftruncate getcwd gethostbyaddr gethostbyname getpass getspnam gettimeofday inet_ntoa isascii memmove memset mkdir realpath rmdir select setenv socket strcasecmp strchr strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol strtoul uname utime strnlen])
 
 
 # System features
