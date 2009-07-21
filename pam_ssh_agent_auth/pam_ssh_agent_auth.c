@@ -46,6 +46,7 @@
 #include "log.h"
 #include "ssh.h"
 #include "pam_static_macros.h"
+#include "secure_filename.h"
 
 char * authorized_keys_file = NULL;
 
@@ -95,7 +96,6 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
             authorized_keys_file_input = *v+strlen("file=");
         }
     }
-
 
     log_init(__progname, log_lvl, facility, 0);
     pam_get_item(pamh, PAM_USER, (void *) &user);

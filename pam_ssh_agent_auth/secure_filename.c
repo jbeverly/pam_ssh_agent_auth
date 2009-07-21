@@ -66,6 +66,20 @@ authorized_key_file_translate(const char * user, const char * authorized_keys_fi
     char * index_ptr = NULL;
     size_t offset;
 
+    /* 
+     * Just use the provided tilde_expand_filename function for ~
+     */
+    if(*authorized_keys_file_input == '~') {
+        authorized_keys_file = tilde_expand_filename(authorized_keys_file_input, getpwnam(user)->pw_uid);
+        return;
+    }
+
+
+    /*
+     * I don't really care for the percent_expand function, plus I want %h to mean homedir, not hostname
+     * so I'll do that expansion myself here. 
+     */
+
 #if HAVE__STRNLEN
     authorized_keys_file_len = strnlen( authorized_keys_file_input, 1024 );
     homedir_len = strnlen( getpwnam(user)->pw_dir, 1024 );
