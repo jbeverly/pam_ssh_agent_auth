@@ -1,29 +1,79 @@
 =head1 PAM_SSH_AGENT_AUTH
 
-This module provides authentication via ssh-agent. It takes only a single argument, file=/path/to/authorized_keys.
+This module provides authentication via ssh-agent. It takes 3 arguments, file=/path/to/authorized_keys, debug, and allow_user_owned_authorized_keys_file.
 If an ssh-agent listening at SSH_AUTH_SOCK can successfully authenticate that it has the secret key for a public key in the specified file, authentication is granted, otherwise authentication files
 
-=head1 EXAMPLE
-
-in /etc/pam.d/sudo:
+=head1 SUMMARY
 
 =over
 
-auth	sufficient	pam_ssh_agent_auth.so file=/etc/security/authorized_keys
+=item /etc/pam.d/sudo:
+ auth	sufficient	pam_ssh_agent_auth.so file=/etc/security/authorized_keys 
+
+=item /etc/sudoers:
+
+ Defaults    env_keep += "SSH_AUTH_SOCK"
 
 =back
-
-in /etc/sudoers:
-
-=over
-
-Defaults    env_keep += "SSH_AUTH_SOCK"
-
-=back
-
 
 This configuration would permit anyone who has an SSH_AUTH_SOCK that manages the private key matching a public key in /etc/security/authorized_keys to execute sudo without having to enter a password. Note that the ssh-agent listening to SSH_AUTH_SOCK can either be local, or forwarded. 
 
 Unlike NOPASSWD, this still requires an authentication, it's just that the authentication is provided by ssh-agent, and not password entry. 
- 
+
+=head1 EXPANSIONS
+
+=over
+
+=item ~  -- same as in shells, a user's Home directory
+
+Automatically enables allow_user_owned_authorized_keys_file if used in the context of ~/. If used as ~user/, it would expect the file to be owned by 'user', unless you explicitely set allow_user_owned_authorized_keys_file
+
+=item %h -- User's Home directory
+
+Automatically enables allow_user_owned_authorized_keys_file
+
+=item %H -- The short-hostname
+
+=item %u -- Username
+
+=item %f -- FQDN
+
+=back 
+
+=head1 EXAMPLES
+
+in /etc/pam.d/sudo
+
+=over 
+
+=item C<auth sufficient pam_ssh_agent_auth.so file=~/.ssh/authorized_keys>
+
+The default .ssh/authorized_keys file in a user's home-directory 
+
+=item C<auth sufficient pam_ssh_agent_auth.so file=%h/.ssh/authorized_keys>
+
+Same as above.
+
+=item C<auth sufficient pam_ssh_agent_auth.so file=~fred/.ssh/authorized_keys>
+
+If the home-directory of user 'fred' was /home/fred, this would expand to /home/fred/.ssh/authorized_keys.
+In this case, we have not specified allow_user_owned_authorized_keys_file, 
+so this file must be owned by 'fred'.
+
+=item C<auth sufficient pam_ssh_agent_auth.so file=/secure/%H/%u/authorized_keys allow_user_owned_authorized_keys_file>
+
+On a host named foobar.baz.com, and a user named fred,
+would expand to /secure/foobar/fred/authorized_keys.
+In this case, we specified allow_user_owned_authorized_keys_file, 
+so fred would be able to manage that authorized_keys file himself. 
+
+=item C<auth sufficient pam_ssh_agent_auth.so file=/secure/%f/%u/authorized_keys>
+
+On a host named foobar.baz.com, and a user named fred, 
+would expand to /secure/foobar.baz.com/fred/authorized_keys.
+In this case, we have not specified allow_user_owned_authorized_keys_file, 
+so this file must be owned by root.
+
+=back
+
 =cut
