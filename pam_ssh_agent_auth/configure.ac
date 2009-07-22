@@ -17,7 +17,6 @@
 AC_INIT(OpenSSH, Portable, openssh-unix-dev@mindrot.org)
 AC_REVISION($Revision: 1.397 $)
 AC_CONFIG_SRCDIR([pam_ssh_agent_auth.c])
-AC_DEFINE([HAVE_BUNDLE], [], [Thingies])
 
 AC_CONFIG_HEADER(config.h)
 AC_PROG_CC

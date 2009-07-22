@@ -80,55 +80,9 @@
 extern char    *authorized_keys_file;
 extern uint8_t  allow_user_owned_authorized_keys_file;
 
-static          size_t
-xstrnlen(const char *s, size_t maxlen)
-{
-#if HAVE_STRNLEN
-    return strnlen(s, maxlen);
-#else
-    return strlen(s);
-#endif
-}
-
-static void
-expand_path_percent_notations(const char *abrev, const char *replacement)
-{
-    char           *index_ptr = NULL;
-    char           *authorized_keys_file_buf = NULL;
-
-    size_t          replacement_len;
-    size_t          authorized_keys_file_len;
-    size_t          abrev_len;
-
-    index_ptr = strstr(authorized_keys_file, abrev);
-
-    if(index_ptr) {
-        replacement_len = xstrnlen(replacement, MAXPATHLEN);
-        authorized_keys_file_len = xstrnlen(authorized_keys_file, MAXPATHLEN);
-        abrev_len = xstrnlen(abrev, MAXPATHLEN);
-
-        do {
-            *index_ptr = '\0';
-            authorized_keys_file_len += replacement_len;
-            replacement_len += replacement_len;
-
-            authorized_keys_file_buf = calloc(1, authorized_keys_file_len + 1);
-            snprintf(authorized_keys_file_buf, MAXPATHLEN, "%s%s%s", authorized_keys_file, replacement, index_ptr + abrev_len);
-            free(authorized_keys_file);
-
-            authorized_keys_file = calloc(1, authorized_keys_file_len + 1);
-            memcpy(authorized_keys_file, authorized_keys_file_buf, authorized_keys_file_len);
-            free(authorized_keys_file_buf);
-
-        } while((index_ptr = strstr(authorized_keys_file, abrev)));
-
-    }
-}
-
 void
 authorized_key_file_translate(const char *user, const char *authorized_keys_file_input)
 {
-    size_t          authorized_keys_file_input_len = 0;
     struct passwd  *pw = getpwnam(user);
     char            hostname[HOST_NAME_MAX] = "no_gethostname_function_on_this_platform";
 
@@ -136,25 +90,17 @@ authorized_key_file_translate(const char *user, const char *authorized_keys_file
      * Just use the provided tilde_expand_filename function for ~
      */
     if(*authorized_keys_file_input == '~') {
-        allow_user_owned_authorized_keys_file = 1;
+        allow_user_owned_authorized_keys_file = 1; /* Automatically enable this for homedir paths */
         authorized_keys_file = tilde_expand_filename(authorized_keys_file_input, pw->pw_uid);
     }
 
     if(strstr(authorized_keys_file_input, "%h"))
-        allow_user_owned_authorized_keys_file = 1;
+        allow_user_owned_authorized_keys_file = 1; /* Automatically enable this for homedir paths */
 
-
-    authorized_keys_file_input_len = xstrnlen(authorized_keys_file_input, MAXPATHLEN);
-    authorized_keys_file = calloc(1, authorized_keys_file_input_len + 1);
-
-    strncpy(authorized_keys_file, authorized_keys_file_input, authorized_keys_file_input_len);
-
-    expand_path_percent_notations("%h", pw->pw_dir);
-    expand_path_percent_notations("%u", user);
 #if HAVE_GETHOSTNAME
     gethostname(hostname, HOST_NAME_MAX);
 #endif
-    expand_path_percent_notations("%H", hostname);
+    authorized_keys_file = percent_expand(authorized_keys_file_input, "h", pw->pw_dir, "H", hostname, "u", user);
 }
 
 int

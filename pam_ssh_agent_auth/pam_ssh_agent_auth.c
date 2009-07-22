@@ -109,6 +109,9 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         if(strncasecmp(*v, "debug", strlen("debug")) == 0) {
             log_lvl = SYSLOG_LEVEL_DEBUG3;
         }
+        if(strncasecmp(*v, "allow_user_owned_authorized_keys_file", strlen("allow_user_owned_authorized_keys_file")) == 0) {
+            allow_user_owned_authorized_keys_file = 1;
+        }
         if(strncasecmp(*v, "file=", strlen("file=")) == 0) {
             authorized_keys_file_input = *v + strlen("file=");
         }
