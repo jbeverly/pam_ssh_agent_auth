@@ -53,6 +53,9 @@
 #ifdef HAVE_LIBGEN_H
 #include <libgen.h>
 #endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -74,30 +77,60 @@
 #include "identity.h"
 #include "pam_user_key_allowed2.h"
 
-extern char * authorized_keys_file;
-extern uint8_t allow_user_owned_authorized_keys_file;
+extern char    *authorized_keys_file;
+extern uint8_t  allow_user_owned_authorized_keys_file;
 
-static size_t
+static          size_t
 xstrnlen(const char *s, size_t maxlen)
 {
 #if HAVE_STRNLEN
-    return strnlen( s, maxlen );
+    return strnlen(s, maxlen);
 #else
-    return strlen( s );
+    return strlen(s);
 #endif
 }
 
-    
+static void
+expand_path_percent_notations(const char *abrev, const char *replacement)
+{
+    char           *index_ptr = NULL;
+    char           *authorized_keys_file_buf = NULL;
 
+    size_t          replacement_len;
+    size_t          authorized_keys_file_len;
+    size_t          abrev_len;
+
+    index_ptr = strstr(authorized_keys_file, abrev);
+
+    if(index_ptr) {
+        replacement_len = xstrnlen(replacement, MAXPATHLEN);
+        authorized_keys_file_len = xstrnlen(authorized_keys_file, MAXPATHLEN);
+        abrev_len = xstrnlen(abrev, MAXPATHLEN);
+
+        do {
+            *index_ptr = '\0';
+            authorized_keys_file_len += replacement_len;
+            replacement_len += replacement_len;
+
+            authorized_keys_file_buf = calloc(1, authorized_keys_file_len + 1);
+            snprintf(authorized_keys_file_buf, MAXPATHLEN, "%s%s%s", authorized_keys_file, replacement, index_ptr + abrev_len);
+            free(authorized_keys_file);
+
+            authorized_keys_file = calloc(1, authorized_keys_file_len + 1);
+            memcpy(authorized_keys_file, authorized_keys_file_buf, authorized_keys_file_len);
+            free(authorized_keys_file_buf);
+
+        } while((index_ptr = strstr(authorized_keys_file, abrev)));
+
+    }
+}
 
 void
-authorized_key_file_translate(const char * user, const char * authorized_keys_file_input)
+authorized_key_file_translate(const char *user, const char *authorized_keys_file_input)
 {
-    size_t authorized_keys_file_len = 0;
-    char * index_ptr = NULL;
-    char * authorized_keys_file_buf = NULL;
-    size_t homedir_len;
-    struct passwd * pw = getpwnam(user);
+    size_t          authorized_keys_file_input_len = 0;
+    struct passwd  *pw = getpwnam(user);
+    char            hostname[HOST_NAME_MAX] = "no_gethostname_function_on_this_platform";
 
     /* 
      * Just use the provided tilde_expand_filename function for ~
@@ -105,42 +138,31 @@ authorized_key_file_translate(const char * user, const char * authorized_keys_fi
     if(*authorized_keys_file_input == '~') {
         allow_user_owned_authorized_keys_file = 1;
         authorized_keys_file = tilde_expand_filename(authorized_keys_file_input, pw->pw_uid);
-        return;
     }
 
-    authorized_keys_file_len = xstrnlen( authorized_keys_file_input, MAXPATHLEN );
-    authorized_keys_file = calloc(1,authorized_keys_file_len + 1);
-
-    strncpy(authorized_keys_file, authorized_keys_file_input, authorized_keys_file_len);
-    index_ptr = strstr(authorized_keys_file, "%h");
-
-    if(index_ptr) {
+    if(strstr(authorized_keys_file_input, "%h"))
         allow_user_owned_authorized_keys_file = 1;
-        homedir_len = xstrnlen( pw->pw_dir, MAXPATHLEN );
 
-        authorized_keys_file_buf = calloc(1,authorized_keys_file_len + 1);
-        do {
-            *index_ptr = '\0'; 
-            authorized_keys_file_len += homedir_len; 
-            homedir_len += homedir_len;
 
-            authorized_keys_file = xrealloc(authorized_keys_file, 1, authorized_keys_file_len + 1);
-            authorized_keys_file_buf = xrealloc(authorized_keys_file_buf, 1, authorized_keys_file_len + 1);
+    authorized_keys_file_input_len = xstrnlen(authorized_keys_file_input, MAXPATHLEN);
+    authorized_keys_file = calloc(1, authorized_keys_file_input_len + 1);
 
-            snprintf(authorized_keys_file_buf, MAXPATHLEN, "%s%s%s", authorized_keys_file, pw->pw_dir, index_ptr+2);
-            memcpy(authorized_keys_file, authorized_keys_file_buf, authorized_keys_file_len + 1);
-        } while( (index_ptr = strstr(authorized_keys_file, "%h")) );
+    strncpy(authorized_keys_file, authorized_keys_file_input, authorized_keys_file_input_len);
 
-        free(authorized_keys_file_buf);
-    }
+    expand_path_percent_notations("%h", pw->pw_dir);
+    expand_path_percent_notations("%u", user);
+#if HAVE_GETHOSTNAME
+    gethostname(hostname, HOST_NAME_MAX);
+#endif
+    expand_path_percent_notations("%H", hostname);
 }
 
 int
-pam_user_key_allowed(Key *key, uid_t uid)
+pam_user_key_allowed(Key * key, uid_t uid)
 {
     if(allow_user_owned_authorized_keys_file) {
         verbose("Allowing user-owned authorized_keys file");
-        return pam_user_key_allowed2(getpwuid(uid), key, authorized_keys_file) 
+        return pam_user_key_allowed2(getpwuid(uid), key, authorized_keys_file)
             || pam_user_key_allowed2(getpwuid(0), key, authorized_keys_file);
     }
 

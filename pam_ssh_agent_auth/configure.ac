@@ -72,7 +72,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRNLEN
 AC_FUNC_UTIME_NULL
-AC_CHECK_FUNCS([dup2 endgrent ftruncate getcwd gethostbyaddr gethostbyname getpass getspnam gettimeofday inet_ntoa isascii memmove memset mkdir realpath rmdir select setenv socket strcasecmp strchr strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol strtoul uname utime strnlen])
+AC_CHECK_FUNCS([dup2 endgrent ftruncate getcwd gethostbyaddr gethostbyname getpass getspnam gettimeofday inet_ntoa isascii memmove memset mkdir realpath rmdir select setenv socket strcasecmp strchr strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol strtoul uname utime strnlen gethostname])
 
 
 # System features

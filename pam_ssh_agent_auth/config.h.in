@@ -163,6 +163,9 @@
 /* Define to 1 if you have the `asprintf' function. */
 #undef HAVE_ASPRINTF
 
+/* Define to 1 if you have the `gethostname' function */
+#undef HAVE_GETHOSTNAME
+
 /* OpenBSD's gcc has bounded */
 #undef HAVE_ATTRIBUTE__BOUNDED__
 

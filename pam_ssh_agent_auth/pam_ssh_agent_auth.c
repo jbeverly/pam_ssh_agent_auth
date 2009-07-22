@@ -64,29 +64,29 @@
 #include "pam_user_authorized_keys.h"
 
 
-char * authorized_keys_file = NULL;
-uint8_t allow_user_owned_authorized_keys_file = 0;
+char           *authorized_keys_file = NULL;
+uint8_t         allow_user_owned_authorized_keys_file = 0;
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
-char * __progname;
+char           *__progname;
 #else
-extern char * __progname;
+extern char    *__progname;
 #endif
 
-PAM_EXTERN int 
-pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) 
+PAM_EXTERN int
+pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
 {
-    const char * user = NULL;
-    char ** v; 
-    int i = 0;
-    int retval = PAM_AUTH_ERR;
-    char * authorized_keys_file_input = NULL;
-    uid_t caller_uid = 0;
-    LogLevel log_lvl = SYSLOG_LEVEL_INFO;
+    const char     *user = NULL;
+    char          **v;
+    int             i = 0;
+    int             retval = PAM_AUTH_ERR;
+    char           *authorized_keys_file_input = NULL;
+    uid_t           caller_uid = 0;
+    LogLevel        log_lvl = SYSLOG_LEVEL_INFO;
 #ifdef SYSLOG_FACILITY_AUTHPRIV
-    SyslogFacility facility = SYSLOG_FACILITY_AUTHPRIV;
+    SyslogFacility  facility = SYSLOG_FACILITY_AUTHPRIV;
 #else
-    SyslogFacility facility = SYSLOG_FACILITY_AUTH;
+    SyslogFacility  facility = SYSLOG_FACILITY_AUTH;
 #endif
 
 /*
@@ -98,19 +98,19 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
  * a patch 8-)
  */
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
-    char * servicename;
+    char           *servicename;
     pam_get_item(pamh, PAM_SERVICE, (void *) &servicename);
-    
-    __progname = calloc(1,1024);
-    strncpy(__prognam,servicename,1024);
+
+    __progname = calloc(1, 1024);
+    strncpy(__prognam, servicename, 1024);
 #endif
 
-    for (i=argc,v=(char **) argv; i > 0; ++v, i--) {
-        if (strncasecmp(*v, "debug", strlen("debug")) == 0) {
+    for(i = argc, v = (char **) argv; i > 0; ++v, i--) {
+        if(strncasecmp(*v, "debug", strlen("debug")) == 0) {
             log_lvl = SYSLOG_LEVEL_DEBUG3;
         }
-        if ( strncasecmp(*v, "file=", strlen("file=")) == 0 ) {
-            authorized_keys_file_input = *v+strlen("file=");
+        if(strncasecmp(*v, "file=", strlen("file=")) == 0) {
+            authorized_keys_file_input = *v + strlen("file=");
         }
     }
 
@@ -119,11 +119,10 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 
     allow_user_owned_authorized_keys_file = 0;
     if(authorized_keys_file_input && user) {
-        authorized_key_file_translate( user, authorized_keys_file_input );
-    }
-    else {
+        authorized_key_file_translate(user, authorized_keys_file_input);
+    } else {
         verbose("Using default file=/etc/security/authorized_keys");
-        authorized_keys_file = calloc(1,strlen("/etc/security/authorized_keys") + 1);
+        authorized_keys_file = calloc(1, strlen("/etc/security/authorized_keys") + 1);
         strcpy(authorized_keys_file, "/etc/security/authorized_keys");
     }
 
@@ -141,8 +140,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
             logit("Authenticated: user %s via ssh-agent using %s", user, authorized_keys_file);
             retval = PAM_SUCCESS;
         }
-    }
-    else {
+    } else {
         logit("No user specified, cannot continue with this form of authentication");
     }
 
@@ -154,10 +152,10 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 
     return retval;
 }
-    
 
-PAM_EXTERN int 
-pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv)
+
+PAM_EXTERN int
+pam_sm_setcred(pam_handle_t * pamh, int flags, int argc, const char **argv)
 {
     return PAM_SUCCESS;
 }
@@ -173,4 +171,3 @@ struct pam_module _pam_ssh_agent_auth_modstruct = {
     NULL,
 };
 #endif
-
