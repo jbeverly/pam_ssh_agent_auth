@@ -84,7 +84,8 @@ void
 authorized_key_file_translate(const char *user, const char *authorized_keys_file_input)
 {
     struct passwd  *pw = getpwnam(user);
-    char            hostname[HOST_NAME_MAX] = "no_gethostname_function_on_this_platform";
+    char            fqdn[HOST_NAME_MAX] = "no_gethostname_function";
+    char            hostname[HOST_NAME_MAX] = "no_gethostname_function";
 
     /* 
      * Just use the provided tilde_expand_filename function for ~
@@ -98,9 +99,11 @@ authorized_key_file_translate(const char *user, const char *authorized_keys_file
         allow_user_owned_authorized_keys_file = 1; /* Automatically enable this for homedir paths */
 
 #if HAVE_GETHOSTNAME
-    gethostname(hostname, HOST_NAME_MAX);
+    *hostname = '\0';
+    gethostname(fqdn, HOST_NAME_MAX);
+    strncat(hostname, fqdn, strcspn(fqdn,"."));
 #endif
-    authorized_keys_file = percent_expand(authorized_keys_file_input, "h", pw->pw_dir, "H", hostname, "u", user);
+    authorized_keys_file = percent_expand(authorized_keys_file_input, "h", pw->pw_dir, "H", hostname, "f", fqdn, "u", user);
 }
 
 int
