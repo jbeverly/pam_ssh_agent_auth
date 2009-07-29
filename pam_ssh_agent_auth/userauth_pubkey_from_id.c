@@ -55,7 +55,7 @@ extern u_char  *session_id2;
 extern uint8_t  session_id2_len;
 
 int
-userauth_pubkey_from_id(Identity * id, uid_t uid)
+userauth_pubkey_from_id(Identity * id)
 {
     Buffer          b;
     char           *pkalg = NULL;
@@ -84,7 +84,7 @@ userauth_pubkey_from_id(Identity * id, uid_t uid)
         goto user_auth_clean_exit;
 
     /* test for correct signature */
-    if(pam_user_key_allowed(id->key, uid) && key_verify(id->key, sig, slen, buffer_ptr(&b), buffer_len(&b)) == 1)
+    if(pam_user_key_allowed(id->key) && key_verify(id->key, sig, slen, buffer_ptr(&b), buffer_len(&b)) == 1)
         authenticated = 1;
 
   user_auth_clean_exit:

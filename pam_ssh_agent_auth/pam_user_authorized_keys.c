@@ -79,41 +79,63 @@
 
 extern char    *authorized_keys_file;
 extern uint8_t  allow_user_owned_authorized_keys_file;
+uid_t           authorized_keys_file_allowed_owner_uid;
 
 void
-authorized_key_file_translate(const char *user, const char *authorized_keys_file_input)
+parse_authorized_key_file(const char *user, const char *authorized_keys_file_input)
 {
-    struct passwd  *pw = getpwnam(user);
-    char            fqdn[HOST_NAME_MAX] = "no_gethostname_function";
-    char            hostname[HOST_NAME_MAX] = "no_gethostname_function";
+    char            fqdn[HOST_NAME_MAX] = "";
+    char            hostname[HOST_NAME_MAX] = "";
+    char            auth_keys_file_buf[4096] = "";
+    char           *slash_ptr = NULL;
+    char            owner_uname[128] = "";
+    size_t          owner_uname_len = 0;
 
-    /* 
-     * Just use the provided tilde_expand_filename function for ~
+    /*
+     * temporary copy, so that both tilde expansion and percent expansion both get to apply to the path
      */
-    if(*authorized_keys_file_input == '~') {
-        allow_user_owned_authorized_keys_file = 1; /* Automatically enable this for homedir paths */
-        authorized_keys_file = tilde_expand_filename(authorized_keys_file_input, pw->pw_uid);
+    strncat(auth_keys_file_buf, authorized_keys_file_input, 4096);
+
+    if(allow_user_owned_authorized_keys_file)
+        authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
+
+    if(*auth_keys_file_buf == '~') {
+        if(*(auth_keys_file_buf+1) == '/') {
+            authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
+        }
+        else {
+            slash_ptr = strchr(auth_keys_file_buf,'/');
+            if(!slash_ptr)
+                fatal("cannot expand tilde in path without a `/'");
+
+            owner_uname_len = slash_ptr - auth_keys_file_buf - 1;
+            if(owner_uname_len > 127) 
+                fatal("Username too long");
+
+            strncat(owner_uname, auth_keys_file_buf + 1, owner_uname_len);
+            if(!authorized_keys_file_allowed_owner_uid)
+                authorized_keys_file_allowed_owner_uid = getpwnam(owner_uname)->pw_uid;
+        }
+        authorized_keys_file = tilde_expand_filename(auth_keys_file_buf, authorized_keys_file_allowed_owner_uid);
+        strncpy(auth_keys_file_buf, authorized_keys_file, 4096);
+        xfree(authorized_keys_file) /* when we percent_expand later, we'd step on this, so free it immediately */;
     }
 
-    if(strstr(authorized_keys_file_input, "%h"))
-        allow_user_owned_authorized_keys_file = 1; /* Automatically enable this for homedir paths */
+    if(strstr(auth_keys_file_buf, "%h")) {
+        authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
+    }
 
 #if HAVE_GETHOSTNAME
     *hostname = '\0';
     gethostname(fqdn, HOST_NAME_MAX);
     strncat(hostname, fqdn, strcspn(fqdn,"."));
 #endif
-    authorized_keys_file = percent_expand(authorized_keys_file_input, "h", pw->pw_dir, "H", hostname, "f", fqdn, "u", user);
+    authorized_keys_file = percent_expand(auth_keys_file_buf, "h", getpwnam(user)->pw_dir, "H", hostname, "f", fqdn, "u", user, NULL);
 }
 
 int
-pam_user_key_allowed(Key * key, uid_t uid)
+pam_user_key_allowed(Key * key)
 {
-    if(allow_user_owned_authorized_keys_file) {
-        verbose("Allowing user-owned authorized_keys file");
-        return pam_user_key_allowed2(getpwuid(uid), key, authorized_keys_file)
-            || pam_user_key_allowed2(getpwuid(0), key, authorized_keys_file);
-    }
-
-    return pam_user_key_allowed2(getpwuid(0), key, authorized_keys_file);
+    return pam_user_key_allowed2(getpwuid(authorized_keys_file_allowed_owner_uid), key, authorized_keys_file)
+        || pam_user_key_allowed2(getpwuid(0), key, authorized_keys_file);
 }

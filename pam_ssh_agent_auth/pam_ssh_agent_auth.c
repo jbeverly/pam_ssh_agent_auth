@@ -120,9 +120,8 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     log_init(__progname, log_lvl, facility, 0);
     pam_get_item(pamh, PAM_USER, (void *) &user);
 
-    allow_user_owned_authorized_keys_file = 0;
     if(authorized_keys_file_input && user) {
-        authorized_key_file_translate(user, authorized_keys_file_input);
+        parse_authorized_key_file(user, authorized_keys_file_input);
     } else {
         verbose("Using default file=/etc/security/authorized_keys");
         authorized_keys_file = calloc(1, strlen("/etc/security/authorized_keys") + 1);
