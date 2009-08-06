@@ -82,6 +82,7 @@ clean:	regressclean
 	rm -f *.o *.a $(PAM_MODULES) logintest config.cache config.log
 	rm -f *.out core survey
 	rm -f *.so
+	rm -f pam_ssh_agent_auth.8
 	(cd openbsd-compat && $(MAKE) clean)
 
 distclean:	regressclean
