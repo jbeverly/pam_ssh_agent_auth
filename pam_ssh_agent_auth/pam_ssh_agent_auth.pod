@@ -1,14 +1,13 @@
 =head1 PAM_SSH_AGENT_AUTH
 
-This module provides authentication via ssh-agent. It takes 3 arguments, file=/path/to/authorized_keys, debug, and allow_user_owned_authorized_keys_file.
-If an ssh-agent listening at SSH_AUTH_SOCK can successfully authenticate that it has the secret key for a public key in the specified file, authentication is granted, otherwise authentication files
+This module provides authentication via ssh-agent.  If an ssh-agent listening at SSH_AUTH_SOCK can successfully authenticate that it has the secret key for a public key in the specified file, authentication is granted, otherwise authentication fails.
 
 =head1 SUMMARY
 
 =over
 
 =item /etc/pam.d/sudo:
- auth	sufficient	pam_ssh_agent_auth.so file=/etc/security/authorized_keys 
+ auth	sufficient	pam_ssh_agent_auth.so file=/etc/security/authorized_keys
 
 =item /etc/sudoers:
 
@@ -19,6 +18,36 @@ If an ssh-agent listening at SSH_AUTH_SOCK can successfully authenticate that it
 This configuration would permit anyone who has an SSH_AUTH_SOCK that manages the private key matching a public key in /etc/security/authorized_keys to execute sudo without having to enter a password. Note that the ssh-agent listening to SSH_AUTH_SOCK can either be local, or forwarded. 
 
 Unlike NOPASSWD, this still requires an authentication, it's just that the authentication is provided by ssh-agent, and not password entry. 
+
+
+=head1 ARGUMENTS
+
+=over
+
+=item file=<path to authorized_keys>
+
+Specify the path to the authorized_keys file(s) you would like to use for authentication. Subject to tilde and % EXPANSIONS (below) 
+
+=item allow_user_owned_authorized_keys_file
+
+A flag which enables authorized_keys files to be owned by the invoking user, instead of root. This flag is enabled automatically whenever
+the expansions %h or ~ are used.
+
+=item debug
+
+A flag which enables verbose logging
+
+=item sudo_service_name=<service name you compiled sudo to use> 
+
+(when compiled with --enable-sudo-hack)
+
+Specify the service name to use to identify the service "sudo". When the PAM_SERVICE identifier matches this 
+string, and if PAM_RUSER is not set, pam_ssh_agent_auth will attempt to identify the calling user from the 
+environment variable SUDO_USER. 
+
+This defaults to "sudo".
+
+=back
 
 =head1 EXPANSIONS
 

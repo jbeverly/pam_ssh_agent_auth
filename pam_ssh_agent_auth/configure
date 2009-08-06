@@ -1303,6 +1303,8 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-largefile     omit support for large files
+  --disable-sudo-hack     Disable using SUDO_USER from the environment
+                          when PAM_SERVICE is sudo and PAM_RUSER is null
   --disable-strip         Disable calling strip(1) on install
 
 Optional Packages:
@@ -8844,6 +8846,24 @@ if test $ac_cv_have_decl_LLONG_MAX = yes; then
 fi
 
 
+enable_sudo_hack=1
+# Check whether --enable-sudo-hack was given.
+if test "${enable_sudo_hack+set}" = set; then
+  enableval=$enable_sudo_hack;
+             if test "x$withval" = "xno"; then
+                 enable_sudo_hack=0
+             fi
+fi
+
+
+if test "$enable_sudo_hack" -eq "1"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define ENABLE_SUDO_HACK 1
+_ACEOF
+
+fi
+
 use_stack_protector=1
 
 # Check whether --with-stackprotect was given.
@@ -9075,6 +9095,7 @@ if test "${with_rpath+set}" = set; then
 
 
 fi
+
 
 
 # Allow user to specify flags

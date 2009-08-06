@@ -85,7 +85,7 @@ find_authorized_keys(uid_t uid)
     session_id2 = session_id2_gen(&session_id2_len);
 
     if ((ac = ssh_get_authentication_connection(uid))) {
-        verbose("Contacted ssh-agent");
+        verbose("Contacted ssh-agent of user %s (%u)", getpwuid(uid)->pw_name, uid);
         for (key = ssh_get_first_identity(ac, &comment, 2); key != NULL; key = ssh_get_next_identity(ac, &comment, 2)) 
         {
             if(key != NULL) {

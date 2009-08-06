@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define if you want to enable the sudo hack */
+#undef ENABLE_SUDO_HACK
+
 /* Define if you have a getaddrinfo that fails for the all-zeros IPv6 address
    */
 #undef AIX_GETNAMEINFO_HACK
