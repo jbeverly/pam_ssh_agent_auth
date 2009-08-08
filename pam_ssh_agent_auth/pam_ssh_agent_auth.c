@@ -75,23 +75,22 @@ extern char    *__progname;
 PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
 {
+    char          **argv_ptr;
     const char     *user = NULL;
-    char            ruser[128] = "";
     char           *ruser_ptr = NULL;
-    char          **v;
+    char           *servicename = NULL;
+    char           *authorized_keys_file_input = NULL;
+    char            sudo_service_name[128] = "sudo";
+    char            ruser[128] = "";
+
     int             i = 0;
     int             retval = PAM_AUTH_ERR;
-    char           *authorized_keys_file_input = NULL;
-    LogLevel        log_lvl = SYSLOG_LEVEL_INFO;
-    char           *servicename;
-#ifdef ENABLE_SUDO_HACK
-    char           sudo_service_name[128] = "sudo";
-#endif
 
-#ifdef SYSLOG_FACILITY_AUTHPRIV
-    SyslogFacility  facility = SYSLOG_FACILITY_AUTHPRIV;
-#else
+    LogLevel        log_lvl = SYSLOG_LEVEL_INFO;
     SyslogFacility  facility = SYSLOG_FACILITY_AUTH;
+
+#ifdef LOG_AUTHPRIV 
+    facility = SYSLOG_FACILITY_AUTHPRIV;
 #endif
 
     pam_get_item(pamh, PAM_SERVICE, (void *) &servicename);
@@ -104,24 +103,22 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
  * a patch 8-)
  */
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
-
-    __progname = calloc(1, 1024);
-    strncpy(__prognam, servicename, 1024);
+    __progname = xstrdup(servicename);
 #endif
 
-    for(i = argc, v = (char **) argv; i > 0; ++v, i--) {
-        if(strncasecmp(*v, "debug", strlen("debug")) == 0) {
+    for(i = argc, argv_ptr = (char **) argv; i > 0; ++argv_ptr, i--) {
+        if(strncasecmp(*argv_ptr, "debug", strlen("debug")) == 0) {
             log_lvl = SYSLOG_LEVEL_DEBUG3;
         }
-        if(strncasecmp(*v, "allow_user_owned_authorized_keys_file", strlen("allow_user_owned_authorized_keys_file")) == 0) {
+        if(strncasecmp(*argv_ptr, "allow_user_owned_authorized_keys_file", strlen("allow_user_owned_authorized_keys_file")) == 0) {
             allow_user_owned_authorized_keys_file = 1;
         }
-        if(strncasecmp(*v, "file=", strlen("file=")) == 0) {
-            authorized_keys_file_input = *v + strlen("file=");
+        if(strncasecmp(*argv_ptr, "file=", strlen("file=")) == 0) {
+            authorized_keys_file_input = *argv_ptr + strlen("file=");
         }
 #ifdef ENABLE_SUDO_HACK
-        if(strncasecmp(*v, "sudo_service_name=", strlen("sudo_service_name=")) == 0) {
-            strncpy( sudo_service_name, *v + strlen("sudo_service_name="), 127 );
+        if(strncasecmp(*argv_ptr, "sudo_service_name=", strlen("sudo_service_name=")) == 0) {
+            strncpy( sudo_service_name, *argv_ptr + strlen("sudo_service_name="), 127 );
         }
 #endif
     }
@@ -131,26 +128,23 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     pam_get_item(pamh, PAM_RUSER, (void *) &ruser_ptr);
 
     if(ruser_ptr) {
-        strncpy(ruser,ruser_ptr,127);
+        strncpy(ruser, ruser_ptr, 127);
     } else {
-        /* We haven't setuid yet, only euid by the suid bit has been set, so we still know who we invoked us */
-        if( getuid() != geteuid() ) {
-            strncpy(ruser, getpwuid(getuid())->pw_name, 127);
-        }
-        else {
-            /*
-             * XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX:
-             * This is a kludge to address a bug in sudo wherein PAM_RUSER is left unset at the time 
-             * pam_authenticate is called, and so we cannot reliably know who invoked the process except
-             * via the SUDO_USER environment variable. I've submitted a patch to sudo which fixes this,
-             * and so this should not be enabled with versions of sudo which contain it. 
-             */
+        /*
+         * XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX:
+         * This is a kludge to address a bug in sudo wherein PAM_RUSER is left unset at the time 
+         * pam_authenticate is called, and so we cannot reliably know who invoked the process except
+         * via the SUDO_USER environment variable. I've submitted a patch to sudo which fixes this,
+         * and so this should not be enabled with versions of sudo which contain it. 
+         */
 #ifdef ENABLE_SUDO_HACK
-            if( sudo_service_name && strncasecmp(servicename, sudo_service_name, strlen(sudo_service_name)) == 0 && getenv("SUDO_USER") ) {
-                verbose( "Using environment variable SUDO_USER (%s)", getenv("SUDO_USER") );
-                strncpy(ruser, getenv("SUDO_USER"), 127);
-            }
+        if( (strlen(sudo_service_name) > 0) && strncasecmp(servicename, sudo_service_name, strlen(sudo_service_name)) == 0 && getenv("SUDO_USER") ) {
+            strncpy(ruser, getenv("SUDO_USER"), 127);
+            verbose( "Using environment variable SUDO_USER (%s)", ruser );
+        } else 
 #endif
+        {
+            strncpy(ruser, getpwuid(getuid())->pw_name, 127);
         }
     }
 
@@ -161,13 +155,12 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         parse_authorized_key_file(user, authorized_keys_file_input);
     } else {
         verbose("Using default file=/etc/security/authorized_keys");
-        authorized_keys_file = calloc(1, strlen("/etc/security/authorized_keys") + 1);
-        strcpy(authorized_keys_file, "/etc/security/authorized_keys");
+        authorized_keys_file = xstrdup("/etc/security/authorized_keys");
     }
 
     /* 
      * PAM_USER and PAM_RUSER do not necessarily have to get set by the calling application, and we may be unable to divine the latter.
-     * In those cases we should fail; this also checks ruser implicitely
+     * In those cases we should fail
      */
 
     if(user && strlen(ruser) > 0) {

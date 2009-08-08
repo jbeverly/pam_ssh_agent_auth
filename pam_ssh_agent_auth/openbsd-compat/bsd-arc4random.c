@@ -65,6 +65,7 @@ arc4random_stir(void)
 	int i;
 
 	memset(&rc4, 0, sizeof(rc4));
+	memset(&rand_buf, 0, sizeof(rand_buf));
 	if (RAND_bytes(rand_buf, sizeof(rand_buf)) <= 0)
 		fatal("Couldn't obtain random bytes (error %ld)",
 		    ERR_get_error());

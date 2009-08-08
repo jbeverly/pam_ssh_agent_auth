@@ -52,12 +52,12 @@
 #include "pam_user_authorized_keys.h"
 
 extern u_char  *session_id2;
-extern uint8_t  session_id2_len;
+extern uint8_t  session_id_len;
 
 int
 userauth_pubkey_from_id(Identity * id)
 {
-    Buffer          b;
+    Buffer          b = { 0 };
     char           *pkalg = NULL;
     u_char         *pkblob = NULL, *sig = NULL;
     u_int           blen = 0, slen = 0;
@@ -71,7 +71,7 @@ userauth_pubkey_from_id(Identity * id)
     /* construct packet to sign and test */
     buffer_init(&b);
 
-    buffer_put_string(&b, session_id2, session_id2_len);
+    buffer_put_string(&b, session_id2, session_id_len);
     buffer_put_char(&b, SSH2_MSG_USERAUTH_REQUEST);
     buffer_put_cstring(&b, "root");
     buffer_put_cstring(&b, "ssh-userauth");
@@ -94,5 +94,6 @@ userauth_pubkey_from_id(Identity * id)
         xfree(sig);
     if(pkblob != NULL)
         xfree(pkblob);
+    CRYPTO_cleanup_all_ex_data();
     return authenticated;
 }

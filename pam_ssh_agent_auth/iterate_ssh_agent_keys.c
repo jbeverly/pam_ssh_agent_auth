@@ -48,23 +48,24 @@
 #include "identity.h"
 
 u_char * session_id2 = NULL;
-uint8_t session_id2_len = 0;
+uint8_t session_id_len = 0;
 
 u_char *
-session_id2_gen(uint8_t * session_id_len)
+session_id2_gen()
 {
     char *cookie = NULL;
     uint8_t i = 0;
     uint32_t rnd = 0;
 
     rnd = arc4random();
-    *session_id_len = (uint8_t) rnd;
+    session_id_len = (uint8_t) rnd;
 
-    cookie = xcalloc(1,*session_id_len);
+    cookie = calloc(1,session_id_len);
 
-    for (i = 0; i < *session_id_len; i++) {
-        if (i % 4 == 0)
+    for (i = 0; i < session_id_len; i++) {
+        if (i % 4 == 0) {
             rnd = arc4random();
+        }
         cookie[i] = (char) rnd;
         rnd >>= 8;
     }
@@ -82,7 +83,7 @@ find_authorized_keys(uid_t uid)
     uint8_t retval = 0;
 
     OpenSSL_add_all_digests();
-    session_id2 = session_id2_gen(&session_id2_len);
+    session_id2 = session_id2_gen();
 
     if ((ac = ssh_get_authentication_connection(uid))) {
         verbose("Contacted ssh-agent of user %s (%u)", getpwuid(uid)->pw_name, uid);
