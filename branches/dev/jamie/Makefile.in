@@ -91,6 +91,7 @@ distclean:	regressclean
 	rm -f Makefile config.h config.status
 	rm -f openbsd-compat/regress/Makefile *~ 
 	rm -rf autom4te.cache
+	rm -f pam_ssh_agent_auth.8
 	(cd openbsd-compat && $(MAKE) distclean)
 	if test -d pkg ; then \
 		rm -fr pkg ; \
