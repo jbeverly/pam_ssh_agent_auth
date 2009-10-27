@@ -73,6 +73,18 @@ AC_FUNC_STRNLEN
 AC_FUNC_UTIME_NULL
 AC_CHECK_FUNCS([dup2 endgrent ftruncate getcwd gethostbyaddr gethostbyname getpass getspnam gettimeofday inet_ntoa isascii memmove memset mkdir realpath rmdir select setenv socket strcasecmp strchr strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol strtoul uname utime strnlen gethostname])
 
+AC_CHECK_FUNCS(openpty,, 
+   AC_CHECK_LIB(util,openpty,
+     [AC_DEFINE(HAVE_OPENPTY) LIBS="$LIBS -lutil"],
+     AC_CHECK_LIB(bsd,openpty, [AC_DEFINE(HAVE_OPENPTY) LIBS="$LIBS -lbsd"])
+   )
+)
+AC_CHECK_FUNCS(forkpty,, 
+   AC_CHECK_LIB(util,forkpty, 
+     [AC_DEFINE(HAVE_FORKPTY) LIBS="$LIBS -lutil"],
+     AC_CHECK_LIB(bsd,forkpty, [AC_DEFINE(HAVE_FORKPTY) LIBS="$LIBS -lbsd"])
+   )
+)
 
 # System features
 AC_SYS_LARGEFILE
@@ -472,7 +484,7 @@ int main(void) { exit(0); }
 	AC_DEFINE(BROKEN_SETREGID)
 	;;
 *-*-darwin*)
-	AC_DEFINE(HAVE_BUNDLE)
+	AC_DEFINE(HAVE_BUNDLE, [], [ Define on a.out platforms which use bundles in lieu of loadable shared objects ] )
 	AC_MSG_CHECKING(if we have working getaddrinfo)
 	AC_TRY_RUN([#include <mach-o/dyld.h>
 main() { if (NSVersionOfRunTimeLibrary("System") >= (60 << 16))
@@ -1177,7 +1189,6 @@ AC_CHECK_FUNCS( \
 	nsleep \
 	ogetaddrinfo \
 	openlog_r \
-	openpty \
 	poll \
 	prctl \
 	pstat \
