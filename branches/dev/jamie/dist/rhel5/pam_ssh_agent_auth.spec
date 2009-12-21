@@ -2,7 +2,7 @@ Summary: PAM module providing authentication via ssh-agent
 Name: pam_ssh_agent_auth
 Version: 0.9
 Release: 0.rh5
-License: GPL, BSD
+License: BSD
 Group: System Environment Base
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-%(id -un)-root
 Source0: http://downloads.sourceforge.net/pamsshagentauth/pam_ssh_agent_auth-0.9.tar.bz2
