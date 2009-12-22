@@ -1,0 +1,1 @@
+PAM authentication via ssh-agent. Forward your ssh-agent, or run one locally, and any keys loaded will serve as authentication for services using this module.
