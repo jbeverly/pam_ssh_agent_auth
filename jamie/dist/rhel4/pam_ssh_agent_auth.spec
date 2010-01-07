@@ -1,36 +1,47 @@
 Summary: PAM module providing authentication via ssh-agent
 Name: pam_ssh_agent_auth
-Version: 0.9
+Version: 0.9.2
 Release: 0.rh4
 License: BSD
 Group: System Environment Base
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-%(id -un)-root
-Source0: http://downloads.sourceforge.net/pamsshagentauth/pam_ssh_agent_auth-0.9.tar.bz2
+Source0: http://downloads.sourceforge.net/pamsshagentauth/%{name}-%{version}.tar.bz2
 Requires: openssl >= 0.9.8, pam, openssh-server, openssh
 BuildRequires: openssl-devel >= 0.9.8, pam-devel, perl, sed
 Vendor: Jamie Beverly
 Packager: Jamie Beverly
 
 %description
-This is a pam module which permits authentication via ssh-agent. To use this, you must forward your ssh-agent socket via ssh, or run an ssh-agent locally. An ssh-agent socket, owned by you, must be listening to the socket defined in $SSH_AUTH_SOCK. For sudo, the $SSH_AUTH_SOCK variable must be in "Defaults env_keep".
+pam_ssh_agent_auth is a PAM module which permits PAM authentication via your
+keyring in a forwarded ssh-agent.
 
+This module can be used to provide authentication for anything run locally that
+supports PAM. It was written specifically with the intention of permitting
+authentication for sudo without password entry, and also has been proven useful
+for use with su as an alternative to wheel. 
 
 %clean
-[ "%{buildroot}" != "/" ] && rm -rf %{buildroot}
+[ "%{buildroot}" != "/" ] && %{__rm} -rf %{buildroot}
 
 %prep
-%setup -n pam_ssh_agent_auth
+%setup 
 
 %build
-%define _libexecdir /lib/security
-%configure --with-selinux
+%define _libexecdir /%{_lib}/security
+%configure --with-selinux --with-sudo-hack
+%{__make} %{?_smp_mflags}
 
 %install
-[ "%{buildroot}" != "/" ] && rm -rf %{buildroot}
+[ "%{buildroot}" != "/" ] && %{__rm} -rf %{buildroot}
 %makeinstall
-gzip %{buildroot}%{_mandir}/man8/pam_ssh_agent_auth.8
 
 %files
-%attr(0755, root, root) /lib/security/pam_ssh_agent_auth.so
-%attr(0644, root, root) %{_mandir}/man8/pam_ssh_agent_auth.8.gz
+%attr(0755, root, root) %{_libexecdir}/pam_ssh_agent_auth.so
+%defattr(-, root, root, 0644)
+%doc LICENSE.OpenSSL OPENSSH_LICENSE
+%doc %{_mandir}/man8/pam_ssh_agent_auth.8*
+
+%changelog
+* Wed Jan 06 2010 Jamie Beverly <jamie.r.beverly@gmail.com> - 0.9.2
+- First packaged release.
 
