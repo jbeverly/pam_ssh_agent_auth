@@ -114,7 +114,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         }
 #ifdef ENABLE_SUDO_HACK
         if(strncasecmp(*argv_ptr, "sudo_service_name=", strlen("sudo_service_name=")) == 0) {
-            strncpy( sudo_service_name, *argv_ptr + strlen("sudo_service_name="), 127 );
+            strncpy( sudo_service_name, *argv_ptr + strlen("sudo_service_name="), sizeof(sudo_service_name) - 1);
         }
 #endif
     }
@@ -124,7 +124,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     pam_get_item(pamh, PAM_RUSER, (void *) &ruser_ptr);
 
     if(ruser_ptr) {
-        strncpy(ruser, ruser_ptr, 127);
+        strncpy(ruser, ruser_ptr, sizeof(ruser) - 1);
     } else {
         /*
          * XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX:
@@ -134,13 +134,13 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
          * and so this should not be enabled with versions of sudo which contain it. 
          */
 #ifdef ENABLE_SUDO_HACK
-        if( (strlen(sudo_service_name) > 0) && strncasecmp(servicename, sudo_service_name, strlen(sudo_service_name)) == 0 && getenv("SUDO_USER") ) {
-            strncpy(ruser, getenv("SUDO_USER"), 127);
+        if( (strlen(sudo_service_name) > 0) && strncasecmp(servicename, sudo_service_name, sizeof(sudo_service_name)) == 0 && getenv("SUDO_USER") ) {
+            strncpy(ruser, getenv("SUDO_USER"), sizeof(ruser) - 1 );
             verbose( "Using environment variable SUDO_USER (%s)", ruser );
         } else 
 #endif
         {
-            strncpy(ruser, getpwuid(getuid())->pw_name, 127);
+            strncpy(ruser, getpwuid(getuid())->pw_name, sizeof(ruser) - 1);
         }
     }
 
