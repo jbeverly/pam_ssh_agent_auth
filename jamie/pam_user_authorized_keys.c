@@ -34,6 +34,12 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 
+#ifndef HOST_NAME_MAX
+#ifdef MAXHOSTNAMELEN
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#endif
+#endif
+
 #include <netinet/in.h>
 
 #include <errno.h>
