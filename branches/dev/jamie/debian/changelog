@@ -1,3 +1,10 @@
+pam-ssh-agent-auth (0.9.3-1) stable; urgency=low
+
+  * Minor fixes
+  * changed default logging to include key signature and key file output (was
+    previously in 'debug' mode)
+
+ -- Jamie Beverly <soupboy@sourceforge.net>  Wed, 13 Jan 2010 01:08:49 +0300
 pam-ssh-agent-auth (0.9.2-1) stable; urgency=low
 
   * Initial Release.
