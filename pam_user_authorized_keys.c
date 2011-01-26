@@ -34,6 +34,12 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 
+#ifndef HOST_NAME_MAX
+#ifdef MAXHOSTNAMELEN
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#endif
+#endif
+
 #include <netinet/in.h>
 
 #include <errno.h>
@@ -91,7 +97,7 @@ parse_authorized_key_file(const char *user, const char *authorized_keys_file_inp
     /*
      * temporary copy, so that both tilde expansion and percent expansion both get to apply to the path
      */
-    strncat(auth_keys_file_buf, authorized_keys_file_input, 4096);
+    strncat(auth_keys_file_buf, authorized_keys_file_input, sizeof(auth_keys_file_buf) - 1);
 
     if(allow_user_owned_authorized_keys_file)
         authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
@@ -106,7 +112,7 @@ parse_authorized_key_file(const char *user, const char *authorized_keys_file_inp
                 fatal("cannot expand tilde in path without a `/'");
 
             owner_uname_len = slash_ptr - auth_keys_file_buf - 1;
-            if(owner_uname_len > 127) 
+            if(owner_uname_len > (sizeof(owner_uname) - 1) ) 
                 fatal("Username too long");
 
             strncat(owner_uname, auth_keys_file_buf + 1, owner_uname_len);
@@ -114,7 +120,7 @@ parse_authorized_key_file(const char *user, const char *authorized_keys_file_inp
                 authorized_keys_file_allowed_owner_uid = getpwnam(owner_uname)->pw_uid;
         }
         authorized_keys_file = tilde_expand_filename(auth_keys_file_buf, authorized_keys_file_allowed_owner_uid);
-        strncpy(auth_keys_file_buf, authorized_keys_file, 4096);
+        strncpy(auth_keys_file_buf, authorized_keys_file, sizeof(auth_keys_file_buf) - 1 );
         xfree(authorized_keys_file) /* when we percent_expand later, we'd step on this, so free it immediately */;
     }
 
