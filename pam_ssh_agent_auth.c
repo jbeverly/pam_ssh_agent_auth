@@ -58,6 +58,7 @@
 #include "pam_static_macros.h"
 #include "pam_user_authorized_keys.h"
 
+#define strncasecmp_literal(A,B) strncasecmp( A, B, sizeof(B) - 1)
 
 char           *authorized_keys_file = NULL;
 uint8_t         allow_user_owned_authorized_keys_file = 0;
@@ -103,18 +104,18 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
 #endif
 
     for(i = argc, argv_ptr = (char **) argv; i > 0; ++argv_ptr, i--) {
-        if(strncasecmp(*argv_ptr, "debug", strlen("debug")) == 0) {
+        if(strncasecmp_literal(*argv_ptr, "debug") == 0) { 
             log_lvl = SYSLOG_LEVEL_DEBUG3;
         }
-        if(strncasecmp(*argv_ptr, "allow_user_owned_authorized_keys_file", strlen("allow_user_owned_authorized_keys_file")) == 0) {
+        if(strncasecmp_literal(*argv_ptr, "allow_user_owned_authorized_keys_file")  == 0) {
             allow_user_owned_authorized_keys_file = 1;
         }
-        if(strncasecmp(*argv_ptr, "file=", strlen("file=")) == 0) {
-            authorized_keys_file_input = *argv_ptr + strlen("file=");
+        if(strncasecmp_literal(*argv_ptr, "file=") == 0 ) { 
+            authorized_keys_file_input = *argv_ptr + sizeof("file=") - 1;
         }
 #ifdef ENABLE_SUDO_HACK
-        if(strncasecmp(*argv_ptr, "sudo_service_name=", strlen("sudo_service_name=")) == 0) {
-            strncpy( sudo_service_name, *argv_ptr + strlen("sudo_service_name="), 127 );
+        if(strncasecmp_literal(*argv_ptr, "sudo_service_name=") == 0) { 
+            strncpy( sudo_service_name, *argv_ptr + sizeof("sudo_service_name=") - 1, sizeof(sudo_service_name) - 1);
         }
 #endif
     }
@@ -123,8 +124,10 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     pam_get_item(pamh, PAM_USER, (void *) &user);
     pam_get_item(pamh, PAM_RUSER, (void *) &ruser_ptr);
 
+    verbose("Beginning pam_ssh_agent_auth for user %s", user);
+
     if(ruser_ptr) {
-        strncpy(ruser, ruser_ptr, 127);
+        strncpy(ruser, ruser_ptr, sizeof(ruser) - 1);
     } else {
         /*
          * XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX:
@@ -134,14 +137,28 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
          * and so this should not be enabled with versions of sudo which contain it. 
          */
 #ifdef ENABLE_SUDO_HACK
-        if( (strlen(sudo_service_name) > 0) && strncasecmp(servicename, sudo_service_name, strlen(sudo_service_name)) == 0 && getenv("SUDO_USER") ) {
-            strncpy(ruser, getenv("SUDO_USER"), 127);
+        if( (strlen(sudo_service_name) > 0) && strncasecmp(servicename, sudo_service_name, sizeof(sudo_service_name) - 1) == 0 && getenv("SUDO_USER") ) {
+            strncpy(ruser, getenv("SUDO_USER"), sizeof(ruser) - 1 );
             verbose( "Using environment variable SUDO_USER (%s)", ruser );
         } else 
 #endif
         {
-            strncpy(ruser, getpwuid(getuid())->pw_name, 127);
+            if( ! getpwuid(getuid()) ) {
+                verbose("Unable to getpwuid(getuid())");
+                goto cleanexit;
+            }
+            strncpy(ruser, getpwuid(getuid())->pw_name, sizeof(ruser) - 1);
         }
+    }
+
+    /* Might as well explicitely confirm the user exists here */
+    if(! getpwnam(ruser) ) {
+        verbose("getpwnam(%s) failed, bailing out", ruser);
+        goto cleanexit;
+    }
+    if( ! getpwnam(user) ) {
+        verbose("getpwnam(%s) failed, bailing out", user);
+        goto cleanexit;
     }
 
     if(authorized_keys_file_input && user) {
@@ -174,6 +191,9 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     } else {
         logit("No %s specified, cannot continue with this form of authentication", (user) ? "ruser" : "user" );
     }
+
+cleanexit:
+
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
     free(__progname);
 #endif
