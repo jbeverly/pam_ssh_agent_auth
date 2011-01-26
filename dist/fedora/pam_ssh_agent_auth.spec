@@ -1,7 +1,7 @@
 Summary: PAM module providing authentication via ssh-agent
 Name: pam_ssh_agent_auth
-Version: 0.9.2
-Release: 0.fc12
+Version: 0.9.3
+Release: 1%{?dist}
 License: BSD
 Group: System Environment Base
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-%(id -un)-root
@@ -42,5 +42,8 @@ for use with su as an alternative to wheel.
 %doc %{_mandir}/man8/pam_ssh_agent_auth.8*
 
 %changelog
+* Wed Jan 26 2011 Jamie Beverly <jamie.r.beverly@gmail.com> - 0.9.3
+- Minor bug fixes
+- Moved logging of signature and key file from debug to normal output
 * Wed Jan 06 2010 Jamie Beverly <jamie.r.beverly@gmail.com> - 0.9.2
 - First packaged release.

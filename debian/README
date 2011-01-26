@@ -3,15 +3,9 @@ The Debian Package pam-ssh-agent-auth
 pam_ssh_agent_auth is a PAM module which permits PAM authentication via your
 keyring in a forwarded ssh-agent.
 
-Release 0.9.2 is stable, and has been tested on NetBSD, FreeBSD, Solaris,
+Release 0.9.3 is stable, and has been tested on NetBSD, FreeBSD, Solaris,
 RHEL4, RHEL5, Debian Etch, Debian Lenny, Ubuntu LTS (8.04), Ubunto 8.10,
 and MacOS X.
-
-The only difference between this version, and version 0.9.1 is the license.
-I have decided to switch to a BSD style license, and so all restrictions
-previously imposed by the GPLv3 no longer apply as of version 0.9.2. This
-relaxation of licensing terms is due in part with the original licensing of
-openssh, from which this work has been derived.
 
 This module can be used to provide authentication for anything run locally that
 supports PAM. It was written specifically with the intention of permitting
@@ -28,7 +22,7 @@ There are caveats of course, ssh-agent forwarding has it’s own security risks
 which must be carefully considered for your environment. In cases where there
 are not untrustworthy intermediate servers, and you wish to retain traceability,
 accountability, and required authentication for privileged command invocation,
-the benefits should outweigh the risks. Release 0.9.2 can be downloaded from
+the benefits should outweigh the risks. Release 0.9.3 can be downloaded from
 SourceForge: https://sourceforge.net/project/showfiles.php?group_id=249556
 
 If you encounter any issues with usability or security, please use the project's
