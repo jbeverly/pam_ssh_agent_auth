@@ -65,8 +65,9 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 
 	verbose("trying public key file %s", file);
 
-	/* Fail quietly if file does not exist */
+	/* Fail not so quietly if file does not exist */
 	if (stat(file, &st) < 0) {
+        verbose("File not found: %s", file);
 		return 0;
 	}
 	/* Open the file containing the authorized keys. */
