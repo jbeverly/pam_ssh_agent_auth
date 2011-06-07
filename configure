@@ -11609,8 +11609,9 @@ _ACEOF
 
 	;;
 *-*-darwin*)
-	cat >>confdefs.h <<\_ACEOF
-#define HAVE_BUNDLE 1
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_BUNDLE /**/
 _ACEOF
 
 	{ $as_echo "$as_me:$LINENO: checking if we have working getaddrinfo" >&5
