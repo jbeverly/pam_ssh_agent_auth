@@ -62,6 +62,10 @@ userauth_pubkey_from_id(Identity * id)
 
     pkalg = (char *) key_ssh_name(id->key);
 
+    /* first test if this key is even allowed */
+    if(! pam_user_key_allowed(id->key))
+        goto user_auth_clean_exit;
+
     if(key_to_blob(id->key, &pkblob, &blen) == 0)
         goto user_auth_clean_exit;
 
@@ -81,7 +85,7 @@ userauth_pubkey_from_id(Identity * id)
         goto user_auth_clean_exit;
 
     /* test for correct signature */
-    if(pam_user_key_allowed(id->key) && key_verify(id->key, sig, slen, buffer_ptr(&b), buffer_len(&b)) == 1)
+    if(key_verify(id->key, sig, slen, buffer_ptr(&b), buffer_len(&b)) == 1)
         authenticated = 1;
 
   user_auth_clean_exit:
