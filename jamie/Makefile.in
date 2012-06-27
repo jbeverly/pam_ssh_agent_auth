@@ -73,7 +73,7 @@ $(LIBCOMPAT): always
 always:
 
 pam_ssh_agent_auth.so: $(LIBCOMPAT) $(SSHOBJS) $(PAM_SSH_AGENT_AUTH_OBJS)  pam_ssh_agent_auth.o
-	$(LD) $(LDFLAGS_SHARED) -o $@ $(SSHOBJS) $(PAM_SSH_AGENT_AUTH_OBJS) $(LDFLAGS) -lopenbsd-compat $(LIBS) -lpam pam_ssh_agent_auth.o
+	$(LD) $(LDFLAGS_SHARED) -o $@ $(SSHOBJS) $(PAM_SSH_AGENT_AUTH_OBJS) $(LDFLAGS) -lopenbsd-compat pam_ssh_agent_auth.o $(LIBS) -lpam
 
 $(MANPAGES): $(MANPAGES_IN)
 	pod2man --section=8 --release=v0.8 --name=pam_ssh_agent_auth --official --center "PAM" pam_ssh_agent_auth.pod > pam_ssh_agent_auth.8
