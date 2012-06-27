@@ -43,7 +43,7 @@ ssh_selinux_enabled(void)
 
 	if (enabled == -1) {
 		enabled = is_selinux_enabled();
-		verbose("SELinux support %s", enabled ? "enabled" : "disabled");
+		pamsshagentauth_verbose("SELinux support %s", enabled ? "enabled" : "disabled");
 	}
 
 	return (enabled);
@@ -77,7 +77,7 @@ ssh_selinux_getctxbyname(char *pwname)
 			fatal("%s: ssh_selinux_getctxbyname: "
 			    "security_getenforce() failed", __func__);
 		case 0:
-			logerror("%s: Failed to get default SELinux security "
+			pamsshagentauth_logerror("%s: Failed to get default SELinux security "
 			    "context for %s", __func__, pwname);
 			break;
 		default:
@@ -106,7 +106,7 @@ ssh_selinux_setup_exec_context(char *pwname)
 	if (!ssh_selinux_enabled())
 		return;
 
-	verbose("%s: setting execution context", __func__);
+	pamsshagentauth_verbose("%s: setting execution context", __func__);
 
 	user_ctx = ssh_selinux_getctxbyname(pwname);
 	if (setexeccon(user_ctx) != 0) {
@@ -114,7 +114,7 @@ ssh_selinux_setup_exec_context(char *pwname)
 		case -1:
 			fatal("%s: security_getenforce() failed", __func__);
 		case 0:
-			logerror("%s: Failed to set SELinux execution "
+			pamsshagentauth_logerror("%s: Failed to set SELinux execution "
 			    "context for %s", __func__, pwname);
 			break;
 		default:
@@ -125,7 +125,7 @@ ssh_selinux_setup_exec_context(char *pwname)
 	if (user_ctx != NULL)
 		freecon(user_ctx);
 
-	verbose("%s: done", __func__);
+	pamsshagentauth_verbose("%s: done", __func__);
 }
 
 /* Set the TTY context for the specified user */
@@ -139,26 +139,26 @@ ssh_selinux_setup_pty(char *pwname, const char *tty)
 	if (!ssh_selinux_enabled())
 		return;
 
-	verbose("%s: setting TTY context on %s", __func__, tty);
+	pamsshagentauth_verbose("%s: setting TTY context on %s", __func__, tty);
 
 	user_ctx = ssh_selinux_getctxbyname(pwname);
 
 	/* XXX: should these calls fatal() upon failure in enforcing mode? */
 
 	if (getfilecon(tty, &old_tty_ctx) == -1) {
-		logerror("%s: getfilecon: %s", __func__, strerror(errno));
+		pamsshagentauth_logerror("%s: getfilecon: %s", __func__, strerror(errno));
 		goto out;
 	}
 
 	if (security_compute_relabel(user_ctx, old_tty_ctx,
 	    SECCLASS_CHR_FILE, &new_tty_ctx) != 0) {
-		logerror("%s: security_compute_relabel: %s",
+		pamsshagentauth_logerror("%s: security_compute_relabel: %s",
 		    __func__, strerror(errno));
 		goto out;
 	}
 
 	if (setfilecon(tty, new_tty_ctx) != 0)
-		logerror("%s: setfilecon: %s", __func__, strerror(errno));
+		pamsshagentauth_logerror("%s: setfilecon: %s", __func__, strerror(errno));
  out:
 	if (new_tty_ctx != NULL)
 		freecon(new_tty_ctx);
@@ -166,6 +166,6 @@ ssh_selinux_setup_pty(char *pwname, const char *tty)
 		freecon(old_tty_ctx);
 	if (user_ctx != NULL)
 		freecon(user_ctx);
-	verbose("%s: done", __func__);
+	pamsshagentauth_verbose("%s: done", __func__);
 }
 #endif /* WITH_SELINUX */

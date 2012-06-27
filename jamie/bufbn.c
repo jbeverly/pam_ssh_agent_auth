@@ -67,7 +67,7 @@ buffer_put_bignum_ret(Buffer *buffer, const BIGNUM *value)
 	/* Get the value of in binary */
 	oi = BN_bn2bin(value, buf);
 	if (oi != bin_size) {
-		logerror("buffer_put_bignum_ret: BN_bn2bin() failed: oi %d != bin_size %d",
+		pamsshagentauth_logerror("buffer_put_bignum_ret: BN_bn2bin() failed: oi %d != bin_size %d",
 		    oi, bin_size);
 		xfree(buf);
 		return (-1);
@@ -103,27 +103,27 @@ buffer_get_bignum_ret(Buffer *buffer, BIGNUM *value)
 
 	/* Get the number of bits. */
 	if (buffer_get_ret(buffer, (char *) buf, 2) == -1) {
-		logerror("buffer_get_bignum_ret: invalid length");
+		pamsshagentauth_logerror("buffer_get_bignum_ret: invalid length");
 		return (-1);
 	}
 	bits = get_u16(buf);
 	/* Compute the number of binary bytes that follow. */
 	bytes = (bits + 7) / 8;
 	if (bytes > 8 * 1024) {
-		logerror("buffer_get_bignum_ret: cannot handle BN of size %d", bytes);
+		pamsshagentauth_logerror("buffer_get_bignum_ret: cannot handle BN of size %d", bytes);
 		return (-1);
 	}
 	if (buffer_len(buffer) < bytes) {
-		logerror("buffer_get_bignum_ret: input buffer too small");
+		pamsshagentauth_logerror("buffer_get_bignum_ret: input buffer too small");
 		return (-1);
 	}
 	bin = buffer_ptr(buffer);
 	if (BN_bin2bn(bin, bytes, value) == NULL) {
-		logerror("buffer_get_bignum_ret: BN_bin2bn failed");
+		pamsshagentauth_logerror("buffer_get_bignum_ret: BN_bin2bn failed");
 		return (-1);
 	}
 	if (buffer_consume_ret(buffer, bytes) == -1) {
-		logerror("buffer_get_bignum_ret: buffer_consume failed");
+		pamsshagentauth_logerror("buffer_get_bignum_ret: buffer_consume failed");
 		return (-1);
 	}
 	return (0);
@@ -152,12 +152,12 @@ buffer_put_bignum2_ret(Buffer *buffer, const BIGNUM *value)
 		return 0;
 	}
 	if (value->neg) {
-		logerror("buffer_put_bignum2_ret: negative numbers not supported");
+		pamsshagentauth_logerror("buffer_put_bignum2_ret: negative numbers not supported");
 		return (-1);
 	}
 	bytes = BN_num_bytes(value) + 1; /* extra padding byte */
 	if (bytes < 2) {
-		logerror("buffer_put_bignum2_ret: BN too small");
+		pamsshagentauth_logerror("buffer_put_bignum2_ret: BN too small");
 		return (-1);
 	}
 	buf = xmalloc(bytes);
@@ -165,7 +165,7 @@ buffer_put_bignum2_ret(Buffer *buffer, const BIGNUM *value)
 	/* Get the value of in binary */
 	oi = BN_bn2bin(value, buf+1);
 	if (oi < 0 || (u_int)oi != bytes - 1) {
-		logerror("buffer_put_bignum2_ret: BN_bn2bin() failed: "
+		pamsshagentauth_logerror("buffer_put_bignum2_ret: BN_bn2bin() failed: "
 		    "oi %d != bin_size %d", oi, bytes);
 		xfree(buf);
 		return (-1);
@@ -191,23 +191,23 @@ buffer_get_bignum2_ret(Buffer *buffer, BIGNUM *value)
 	u_char *bin;
 
 	if ((bin = buffer_get_string_ret(buffer, &len)) == NULL) {
-		logerror("buffer_get_bignum2_ret: invalid bignum");
+		pamsshagentauth_logerror("buffer_get_bignum2_ret: invalid bignum");
 		return (-1);
 	}
 
 	if (len > 0 && (bin[0] & 0x80)) {
-		logerror("buffer_get_bignum2_ret: negative numbers not supported");
+		pamsshagentauth_logerror("buffer_get_bignum2_ret: negative numbers not supported");
 		xfree(bin);
 		return (-1);
 	}
 	if (len > 8 * 1024) {
-		logerror("buffer_get_bignum2_ret: cannot handle BN of size %d",
+		pamsshagentauth_logerror("buffer_get_bignum2_ret: cannot handle BN of size %d",
 		    len);
 		xfree(bin);
 		return (-1);
 	}
 	if (BN_bin2bn(bin, len, value) == NULL) {
-		logerror("buffer_get_bignum2_ret: BN_bin2bn failed");
+		pamsshagentauth_logerror("buffer_get_bignum2_ret: BN_bin2bn failed");
 		xfree(bin);
 		return (-1);
 	}

@@ -377,7 +377,7 @@ write_bignum(FILE *f, BIGNUM *num)
 {
 	char *buf = BN_bn2dec(num);
 	if (buf == NULL) {
-		logerror("write_bignum: BN_bn2dec() failed");
+		pamsshagentauth_logerror("write_bignum: BN_bn2dec() failed");
 		return 0;
 	}
 	fprintf(f, " %s", buf);
@@ -420,44 +420,44 @@ key_read(Key *ret, char **cpp)
 	case KEY_DSA:
 		space = strchr(cp, ' ');
 		if (space == NULL) {
-			verbose("key_read: missing whitespace");
+			pamsshagentauth_verbose("key_read: missing whitespace");
 			return -1;
 		}
 		*space = '\0';
 		type = key_type_from_name(cp);
 		*space = ' ';
 		if (type == KEY_UNSPEC) {
-			verbose("key_read: missing keytype");
+			pamsshagentauth_verbose("key_read: missing keytype");
 			return -1;
 		}
 		cp = space+1;
 		if (*cp == '\0') {
-			verbose("key_read: short string");
+			pamsshagentauth_verbose("key_read: short string");
 			return -1;
 		}
 		if (ret->type == KEY_UNSPEC) {
 			ret->type = type;
 		} else if (ret->type != type) {
 			/* is a key, but different type */
-			verbose("key_read: type mismatch");
+			pamsshagentauth_verbose("key_read: type mismatch");
 			return -1;
 		}
 		len = 2*strlen(cp);
 		blob = xmalloc(len);
 		n = uudecode(cp, blob, len);
 		if (n < 0) {
-			logerror("key_read: uudecode %s failed", cp);
+			pamsshagentauth_logerror("key_read: uudecode %s failed", cp);
 			xfree(blob);
 			return -1;
 		}
 		k = key_from_blob(blob, (u_int)n);
 		xfree(blob);
 		if (k == NULL) {
-			logerror("key_read: key_from_blob %s failed", cp);
+			pamsshagentauth_logerror("key_read: key_from_blob %s failed", cp);
 			return -1;
 		}
 		if (k->type != type) {
-			logerror("key_read: type mismatch: encoding error");
+			pamsshagentauth_logerror("key_read: type mismatch: encoding error");
 			key_free(k);
 			return -1;
 		}
@@ -515,7 +515,7 @@ key_write(const Key *key, FILE *f)
 		    write_bignum(f, key->rsa->n)) {
 			success = 1;
 		} else {
-			logerror("key_write: failed for RSA key");
+			pamsshagentauth_logerror("key_write: failed for RSA key");
 		}
 	} else if ((key->type == KEY_DSA && key->dsa != NULL) ||
 	    (key->type == KEY_RSA && key->rsa != NULL)) {
@@ -656,7 +656,7 @@ key_type_from_name(char *name)
 	} else if (strcmp(name, "ssh-dss") == 0) {
 		return KEY_DSA;
 	}
-	verbose("key_type_from_name: unknown key type '%s'", name);
+	pamsshagentauth_verbose("key_type_from_name: unknown key type '%s'", name);
 	return KEY_UNSPEC;
 }
 
@@ -677,7 +677,7 @@ key_names_valid2(const char *names)
 			return 0;
 		}
 	}
-	verbose("key names ok: [%s]", names);
+	pamsshagentauth_verbose("key names ok: [%s]", names);
 	xfree(s);
 	return 1;
 }
@@ -696,7 +696,7 @@ key_from_blob(const u_char *blob, u_int blen)
 	buffer_init(&b);
 	buffer_append(&b, blob, blen);
 	if ((ktype = buffer_get_string_ret(&b, NULL)) == NULL) {
-		logerror("key_from_blob: can't read key type");
+		pamsshagentauth_logerror("key_from_blob: can't read key type");
 		goto out;
 	}
 
@@ -707,7 +707,7 @@ key_from_blob(const u_char *blob, u_int blen)
 		key = key_new(type);
 		if (buffer_get_bignum2_ret(&b, key->rsa->e) == -1 ||
 		    buffer_get_bignum2_ret(&b, key->rsa->n) == -1) {
-			logerror("key_from_blob: can't read rsa key");
+			pamsshagentauth_logerror("key_from_blob: can't read rsa key");
 			key_free(key);
 			key = NULL;
 			goto out;
@@ -722,7 +722,7 @@ key_from_blob(const u_char *blob, u_int blen)
 		    buffer_get_bignum2_ret(&b, key->dsa->q) == -1 ||
 		    buffer_get_bignum2_ret(&b, key->dsa->g) == -1 ||
 		    buffer_get_bignum2_ret(&b, key->dsa->pub_key) == -1) {
-			logerror("key_from_blob: can't read dsa key");
+			pamsshagentauth_logerror("key_from_blob: can't read dsa key");
 			key_free(key);
 			key = NULL;
 			goto out;
@@ -735,12 +735,12 @@ key_from_blob(const u_char *blob, u_int blen)
 		key = key_new(type);
 		break;
 	default:
-		logerror("key_from_blob: cannot handle type %s", ktype);
+		pamsshagentauth_logerror("key_from_blob: cannot handle type %s", ktype);
 		goto out;
 	}
 	rlen = buffer_len(&b);
 	if (key != NULL && rlen != 0)
-		logerror("key_from_blob: remaining bytes in key blob %d", rlen);
+		pamsshagentauth_logerror("key_from_blob: remaining bytes in key blob %d", rlen);
  out:
 	if (ktype != NULL)
 		xfree(ktype);
@@ -755,7 +755,7 @@ key_to_blob(const Key *key, u_char **blobp, u_int *lenp)
 	int len;
 
 	if (key == NULL) {
-		logerror("key_to_blob: key == NULL");
+		pamsshagentauth_logerror("key_to_blob: key == NULL");
 		return 0;
 	}
 	buffer_init(&b);
@@ -773,7 +773,7 @@ key_to_blob(const Key *key, u_char **blobp, u_int *lenp)
 		buffer_put_bignum2(&b, key->rsa->n);
 		break;
 	default:
-		logerror("key_to_blob: unsupported key type %d", key->type);
+		pamsshagentauth_logerror("key_to_blob: unsupported key type %d", key->type);
 		buffer_free(&b);
 		return 0;
 	}
@@ -801,7 +801,7 @@ key_sign(
 	case KEY_RSA:
 		return ssh_rsa_sign(key, sigp, lenp, data, datalen);
 	default:
-		logerror("key_sign: invalid key type %d", key->type);
+		pamsshagentauth_logerror("key_sign: invalid key type %d", key->type);
 		return -1;
 	}
 }
@@ -825,7 +825,7 @@ key_verify(
 	case KEY_RSA:
 		return ssh_rsa_verify(key, signature, signaturelen, data, datalen);
 	default:
-		logerror("key_verify: invalid key type %d", key->type);
+		pamsshagentauth_logerror("key_verify: invalid key type %d", key->type);
 		return -1;
 	}
 }

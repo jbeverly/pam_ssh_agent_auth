@@ -47,12 +47,12 @@ ssh_rsa_sign(const Key *key, u_char **sigp, u_int *lenp,
 	Buffer b;
 
 	if (key == NULL || key->type != KEY_RSA || key->rsa == NULL) {
-		logerror("ssh_rsa_sign: no RSA key");
+		pamsshagentauth_logerror("ssh_rsa_sign: no RSA key");
 		return -1;
 	}
 	nid = (datafellows & SSH_BUG_RSASIGMD5) ? NID_md5 : NID_sha1;
 	if ((evp_md = EVP_get_digestbynid(nid)) == NULL) {
-		logerror("ssh_rsa_sign: EVP_get_digestbynid %d failed", nid);
+		pamsshagentauth_logerror("ssh_rsa_sign: EVP_get_digestbynid %d failed", nid);
 		return -1;
 	}
 	EVP_DigestInit(&md, evp_md);
@@ -68,18 +68,18 @@ ssh_rsa_sign(const Key *key, u_char **sigp, u_int *lenp,
 	if (ok != 1) {
 		int ecode = ERR_get_error();
 
-		logerror("ssh_rsa_sign: RSA_sign failed: %s",
+		pamsshagentauth_logerror("ssh_rsa_sign: RSA_sign failed: %s",
 		    ERR_error_string(ecode, NULL));
 		xfree(sig);
 		return -1;
 	}
 	if (len < slen) {
 		u_int diff = slen - len;
-		verbose("slen %u > len %u", slen, len);
+		pamsshagentauth_verbose("slen %u > len %u", slen, len);
 		memmove(sig + diff, sig, len);
 		memset(sig, 0, diff);
 	} else if (len > slen) {
-		logerror("ssh_rsa_sign: slen %u slen2 %u", slen, len);
+		pamsshagentauth_logerror("ssh_rsa_sign: slen %u slen2 %u", slen, len);
 		xfree(sig);
 		return -1;
 	}
@@ -114,11 +114,11 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	int rlen, ret, nid;
 
 	if (key == NULL || key->type != KEY_RSA || key->rsa == NULL) {
-		logerror("ssh_rsa_verify: no RSA key");
+		pamsshagentauth_logerror("ssh_rsa_verify: no RSA key");
 		return -1;
 	}
 	if (BN_num_bits(key->rsa->n) < SSH_RSA_MINIMUM_MODULUS_SIZE) {
-		logerror("ssh_rsa_verify: RSA modulus too small: %d < minimum %d bits",
+		pamsshagentauth_logerror("ssh_rsa_verify: RSA modulus too small: %d < minimum %d bits",
 		    BN_num_bits(key->rsa->n), SSH_RSA_MINIMUM_MODULUS_SIZE);
 		return -1;
 	}
@@ -126,7 +126,7 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	buffer_append(&b, signature, signaturelen);
 	ktype = buffer_get_string(&b, NULL);
 	if (strcmp("ssh-rsa", ktype) != 0) {
-		logerror("ssh_rsa_verify: cannot handle type %s", ktype);
+		pamsshagentauth_logerror("ssh_rsa_verify: cannot handle type %s", ktype);
 		buffer_free(&b);
 		xfree(ktype);
 		return -1;
@@ -136,19 +136,19 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	rlen = buffer_len(&b);
 	buffer_free(&b);
 	if (rlen != 0) {
-		logerror("ssh_rsa_verify: remaining bytes in signature %d", rlen);
+		pamsshagentauth_logerror("ssh_rsa_verify: remaining bytes in signature %d", rlen);
 		xfree(sigblob);
 		return -1;
 	}
 	/* RSA_verify expects a signature of RSA_size */
 	modlen = RSA_size(key->rsa);
 	if (len > modlen) {
-		logerror("ssh_rsa_verify: len %u > modlen %u", len, modlen);
+		pamsshagentauth_logerror("ssh_rsa_verify: len %u > modlen %u", len, modlen);
 		xfree(sigblob);
 		return -1;
 	} else if (len < modlen) {
 		u_int diff = modlen - len;
-		verbose("ssh_rsa_verify: add padding: modlen %u > len %u",
+		pamsshagentauth_verbose("ssh_rsa_verify: add padding: modlen %u > len %u",
 		    modlen, len);
 		sigblob = xrealloc(sigblob, 1, modlen);
 		memmove(sigblob + diff, sigblob, len);
@@ -157,7 +157,7 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	}
 	nid = (datafellows & SSH_BUG_RSASIGMD5) ? NID_md5 : NID_sha1;
 	if ((evp_md = EVP_get_digestbynid(nid)) == NULL) {
-		logerror("ssh_rsa_verify: EVP_get_digestbynid %d failed", nid);
+		pamsshagentauth_logerror("ssh_rsa_verify: EVP_get_digestbynid %d failed", nid);
 		xfree(sigblob);
 		return -1;
 	}
@@ -169,7 +169,7 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	memset(digest, 'd', sizeof(digest));
 	memset(sigblob, 's', len);
 	xfree(sigblob);
-	verbose("ssh_rsa_verify: signature %scorrect", (ret==0) ? "in" : "");
+	pamsshagentauth_verbose("ssh_rsa_verify: signature %scorrect", (ret==0) ? "in" : "");
 	return ret;
 }
 
@@ -228,31 +228,31 @@ openssh_RSA_verify(int type, u_char *hash, u_int hashlen,
 		goto done;
 	}
 	if (hashlen != hlen) {
-		logerror("bad hashlen");
+		pamsshagentauth_logerror("bad hashlen");
 		goto done;
 	}
 	rsasize = RSA_size(rsa);
 	if (siglen == 0 || siglen > rsasize) {
-		logerror("bad siglen");
+		pamsshagentauth_logerror("bad siglen");
 		goto done;
 	}
 	decrypted = xmalloc(rsasize);
 	if ((len = RSA_public_decrypt(siglen, sigbuf, decrypted, rsa,
 	    RSA_PKCS1_PADDING)) < 0) {
-		logerror("RSA_public_decrypt failed: %s",
+		pamsshagentauth_logerror("RSA_public_decrypt failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
 		goto done;
 	}
 	if (len < 0 || (u_int)len != hlen + oidlen) {
-		logerror("bad decrypted len: %d != %d + %d", len, hlen, oidlen);
+		pamsshagentauth_logerror("bad decrypted len: %d != %d + %d", len, hlen, oidlen);
 		goto done;
 	}
 	if (memcmp(decrypted, oid, oidlen) != 0) {
-		logerror("oid mismatch");
+		pamsshagentauth_logerror("oid mismatch");
 		goto done;
 	}
 	if (memcmp(decrypted + oidlen, hash, hlen) != 0) {
-		logerror("hash mismatch");
+		pamsshagentauth_logerror("hash mismatch");
 		goto done;
 	}
 	ret = 1;

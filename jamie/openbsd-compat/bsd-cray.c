@@ -118,11 +118,11 @@ cray_login_failure(char *username, int errcode)
 	int jid = 0;			/* job id */
 
 	if ((jid = getjtab(&jtab)) < 0)
-		verbose("cray_login_failure(): getjtab error");
+		pamsshagentauth_verbose("cray_login_failure(): getjtab error");
 
 	getsysudb();
 	if ((ueptr = getudbnam(username)) == UDB_NULL)
-		verbose("cray_login_failure(): getudbname() returned NULL");
+		pamsshagentauth_verbose("cray_login_failure(): getudbname() returned NULL");
 	endudb();
 
 	memset(&fsent, '\0', sizeof(fsent));
@@ -159,7 +159,7 @@ cray_access_denied(char *username)
 	errcode = 0;
 	getsysudb();
 	if ((ueptr = getudbnam(username)) == UDB_NULL)
-		verbose("cray_login_failure(): getudbname() returned NULL");
+		pamsshagentauth_verbose("cray_login_failure(): getudbname() returned NULL");
 	endudb();
 
 	if (ueptr != NULL && ueptr->ue_disabled)
@@ -243,7 +243,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 	endudb();
 
 	if ((jid = getjtab(&jtab)) < 0) {
-		verbose("getjtab");
+		pamsshagentauth_verbose("getjtab");
 		return(-1);
 	}
 	pid = getpid();
@@ -255,7 +255,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 			secstatrc = fsecstat(1, &secinfo);
 
 		if (secstatrc == 0)
-			verbose("[f]secstat() successful");
+			pamsshagentauth_verbose("[f]secstat() successful");
 		else
 			fatal("[f]secstat() error, rc = %d", secstatrc);
 	}
@@ -412,7 +412,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 
 	ia_mlsrcode = IA_NORMAL;
 	if (SecureSys) {
-		verbose("calling ia_mlsuser()");
+		pamsshagentauth_verbose("calling ia_mlsuser()");
 		ia_mlsrcode = ia_mlsuser(&ue, &secinfo, &usrv, NULL, 0);
 	}
 	if (ia_mlsrcode != IA_NORMAL) {
@@ -490,7 +490,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 	    (ue.ue_acids[0] >= 0) && (ue.ue_acids[1] >= 0)) &&
 	    ue.ue_permbits & PERMBITS_ASKACID) {
 		if (ttyname(0) != NULL) {
-			verbose("cray_setup: ttyname true case, %.100s", ttyname);
+			pamsshagentauth_verbose("cray_setup: ttyname true case, %.100s", ttyname);
 			while (valid_acct == -1) {
 				printf("Account (? for available accounts)"
 				    " [%s]: ", acid2nam(ue.ue_acids[0]));
@@ -560,7 +560,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 			 * The client isn't connected to a terminal and can't
 			 * respond to an acid prompt.  Use default acid.
 			 */
-			verbose("cray_setup: ttyname false case, %.100s",
+			pamsshagentauth_verbose("cray_setup: ttyname false case, %.100s",
 			    ttyname);
 			valid_acct = ue.ue_acids[0];
 		}
@@ -589,12 +589,12 @@ cray_setup (uid_t uid, char *username, const char *command)
 
 	sr = setlimits(username, C_PROC, pid, UDBRC_INTER);
 	if (sr != NULL) {
-		verbose("%.200s", sr);
+		pamsshagentauth_verbose("%.200s", sr);
 		exit(1);
 	}
 	sr = setlimits(username, C_JOB, jid, UDBRC_INTER);
 	if (sr != NULL) {
-		verbose("%.200s", sr);
+		pamsshagentauth_verbose("%.200s", sr);
 		exit(1);
 	}
 	/*
@@ -614,7 +614,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 	 */
 	if (SecureSys) {
 		if (setusrv(&usrv) == -1) {
-			verbose("setusrv() failed, errno = %d",errno);
+			pamsshagentauth_verbose("setusrv() failed, errno = %d",errno);
 			exit(1);
 		}
 	}
@@ -646,7 +646,7 @@ drop_cray_privs()
 	if (!sysconf(_SC_CRAY_POSIX_PRIV))
 		fatal("Not POSIX_PRIV.");
 
-	verbose("Setting MLS labels.");;
+	pamsshagentauth_verbose("Setting MLS labels.");;
 
 	if (sysconf(_SC_CRAY_SECURE_MAC)) {
 		usrv.sv_minlvl = SYSLOW;
