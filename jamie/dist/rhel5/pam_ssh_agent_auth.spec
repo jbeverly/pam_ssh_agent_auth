@@ -1,6 +1,6 @@
 Summary: PAM module providing authentication via ssh-agent
 Name: pam_ssh_agent_auth
-Version: 0.9.3
+Version: 0.9.4
 Release: 1%{?dist}
 License: BSD
 Group: System Environment Base
@@ -42,6 +42,10 @@ for use with su as an alternative to wheel.
 %doc %{_mandir}/man8/pam_ssh_agent_auth.8*
 
 %changelog
+* Wed Jun 26 2012 Jamie Beverly <soupboy@sourceforge.net> - 0.9.4
+- Prefixed symbol names to avoid collision with globally dl_open'd symbols names
+- updated Makefile.in as per http://sourceforge.net/tracker/?func=detail&aid=3510464&group_id=249556&atid=1126337
+- updated documentation for pam configuration
 * Wed Jan 26 2011 Jamie Beverly <jamie.r.beverly@gmail.com> - 0.9.3
 - Minor bug fixes
 - Moved logging of signature and key file from debug to normal output
