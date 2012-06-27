@@ -71,7 +71,7 @@
  * Returns 0 on success and -1 on failure
  */
 int
-secure_filename(FILE *f, const char *file, struct passwd *pw,
+pamsshagentauth_secure_filename(FILE *f, const char *file, struct passwd *pw,
     char *err, size_t errlen)
 {
 	uid_t uid = pw->pw_uid;
@@ -105,7 +105,7 @@ secure_filename(FILE *f, const char *file, struct passwd *pw,
 			snprintf(err, errlen, "dirname() failed");
 			return -1;
 		}
-		strlcpy(buf, cp, sizeof(buf));
+		pamsshagentauth_strlcpy(buf, cp, sizeof(buf));
 
 		pamsshagentauth_verbose("secure_filename: checking '%s'", buf);
 		if (stat(buf, &st) < 0 ||

@@ -48,7 +48,7 @@
  * ensure all of data on socket comes through. f==read || f==vwrite
  */
 size_t
-atomicio(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n)
+pamsshagentauth_atomicio(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n)
 {
 	char *s = _s;
 	size_t pos = 0;
@@ -86,7 +86,7 @@ atomicio(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n)
  * ensure all of data on socket comes through. f==readv || f==writev
  */
 size_t
-atomiciov(ssize_t (*f) (int, const struct iovec *, int), int fd,
+pamsshagentauth_atomiciov(ssize_t (*f) (int, const struct iovec *, int), int fd,
     const struct iovec *_iov, int iovcnt)
 {
 	size_t pos = 0, rem;

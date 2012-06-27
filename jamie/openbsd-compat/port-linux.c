@@ -74,14 +74,14 @@ ssh_selinux_getctxbyname(char *pwname)
 	if (r != 0) {
 		switch (security_getenforce()) {
 		case -1:
-			fatal("%s: ssh_selinux_getctxbyname: "
+			pamsshagentauth_fatal("%s: ssh_selinux_getctxbyname: "
 			    "security_getenforce() failed", __func__);
 		case 0:
 			pamsshagentauth_logerror("%s: Failed to get default SELinux security "
 			    "context for %s", __func__, pwname);
 			break;
 		default:
-			fatal("%s: Failed to get default SELinux security "
+			pamsshagentauth_fatal("%s: Failed to get default SELinux security "
 			    "context for %s (in enforcing mode)",
 			    __func__, pwname);
 		}
@@ -89,9 +89,9 @@ ssh_selinux_getctxbyname(char *pwname)
 
 #ifdef HAVE_GETSEUSERBYNAME
 	if (sename != NULL)
-		xfree(sename);
+		pamsshagentauth_xfree(sename);
 	if (lvl != NULL)
-		xfree(lvl);
+		pamsshagentauth_xfree(lvl);
 #endif
 
 	return (sc);
@@ -112,13 +112,13 @@ ssh_selinux_setup_exec_context(char *pwname)
 	if (setexeccon(user_ctx) != 0) {
 		switch (security_getenforce()) {
 		case -1:
-			fatal("%s: security_getenforce() failed", __func__);
+			pamsshagentauth_fatal("%s: security_getenforce() failed", __func__);
 		case 0:
 			pamsshagentauth_logerror("%s: Failed to set SELinux execution "
 			    "context for %s", __func__, pwname);
 			break;
 		default:
-			fatal("%s: Failed to set SELinux execution context "
+			pamsshagentauth_fatal("%s: Failed to set SELinux execution context "
 			    "for %s (in enforcing mode)", __func__, pwname);
 		}
 	}
@@ -143,7 +143,7 @@ ssh_selinux_setup_pty(char *pwname, const char *tty)
 
 	user_ctx = ssh_selinux_getctxbyname(pwname);
 
-	/* XXX: should these calls fatal() upon failure in enforcing mode? */
+	/* XXX: should these calls pamsshagentauth_fatal() upon failure in enforcing mode? */
 
 	if (getfilecon(tty, &old_tty_ctx) == -1) {
 		pamsshagentauth_logerror("%s: getfilecon: %s", __func__, strerror(errno));

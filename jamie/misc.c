@@ -58,7 +58,7 @@
 
 /* remove newline at end of string */
 char *
-chop(char *s)
+pamsshagentauth_chop(char *s)
 {
 	char *t = s;
 	while (*t) {
@@ -74,7 +74,7 @@ chop(char *s)
 
 /* set/unset filedescriptor to non-blocking */
 int
-set_nonblock(int fd)
+pamsshagentauth_set_nonblock(int fd)
 {
 	int val;
 
@@ -98,7 +98,7 @@ set_nonblock(int fd)
 }
 
 int
-unset_nonblock(int fd)
+pamsshagentauth_unset_nonblock(int fd)
 {
 	int val;
 
@@ -131,7 +131,7 @@ ssh_gai_strerror(int gaierr)
 
 /* disable nagle on socket */
 void
-set_nodelay(int fd)
+pamsshagentauth_set_nodelay(int fd)
 {
 	int opt;
 	socklen_t optlen;
@@ -157,7 +157,7 @@ set_nodelay(int fd)
 
 /* return next token in configuration line */
 char *
-strdelim(char **s)
+pamsshagentauth_strdelim(char **s)
 {
 	char *old;
 	int wspace = 0;
@@ -196,13 +196,13 @@ strdelim(char **s)
 }
 
 struct passwd *
-pwcopy(struct passwd *pw)
+pamsshagentauth_pwcopy(struct passwd *pw)
 {
-	struct passwd *copy = xcalloc(1, sizeof(*copy));
+	struct passwd *copy = pamsshagentauth_xcalloc(1, sizeof(*copy));
 
-	copy->pw_name = xstrdup(pw->pw_name);
-	copy->pw_passwd = xstrdup(pw->pw_passwd);
-	copy->pw_gecos = xstrdup(pw->pw_gecos);
+	copy->pw_name = pamsshagentauth_xstrdup(pw->pw_name);
+	copy->pw_passwd = pamsshagentauth_xstrdup(pw->pw_passwd);
+	copy->pw_gecos = pamsshagentauth_xstrdup(pw->pw_gecos);
 	copy->pw_uid = pw->pw_uid;
 	copy->pw_gid = pw->pw_gid;
 #ifdef HAVE_PW_EXPIRE_IN_PASSWD
@@ -212,10 +212,10 @@ pwcopy(struct passwd *pw)
 	copy->pw_change = pw->pw_change;
 #endif
 #ifdef HAVE_PW_CLASS_IN_PASSWD
-	copy->pw_class = xstrdup(pw->pw_class);
+	copy->pw_class = pamsshagentauth_xstrdup(pw->pw_class);
 #endif
-	copy->pw_dir = xstrdup(pw->pw_dir);
-	copy->pw_shell = xstrdup(pw->pw_shell);
+	copy->pw_dir = pamsshagentauth_xstrdup(pw->pw_dir);
+	copy->pw_shell = pamsshagentauth_xstrdup(pw->pw_shell);
 	return copy;
 }
 
@@ -225,7 +225,7 @@ pwcopy(struct passwd *pw)
  * Return 0 if invalid.
  */
 int
-a2port(const char *s)
+pamsshagentauth_a2port(const char *s)
 {
 	long port;
 	char *endp;
@@ -241,7 +241,7 @@ a2port(const char *s)
 }
 
 int
-a2tun(const char *s, int *remote)
+pamsshagentauth_a2tun(const char *s, int *remote)
 {
 	const char *errstr = NULL;
 	char *sp, *ep;
@@ -249,22 +249,22 @@ a2tun(const char *s, int *remote)
 
 	if (remote != NULL) {
 		*remote = SSH_TUNID_ANY;
-		sp = xstrdup(s);
+		sp = pamsshagentauth_xstrdup(s);
 		if ((ep = strchr(sp, ':')) == NULL) {
-			xfree(sp);
-			return (a2tun(s, NULL));
+			pamsshagentauth_xfree(sp);
+			return (pamsshagentauth_a2tun(s, NULL));
 		}
 		ep[0] = '\0'; ep++;
-		*remote = a2tun(ep, NULL);
-		tun = a2tun(sp, NULL);
-		xfree(sp);
+		*remote = pamsshagentauth_a2tun(ep, NULL);
+		tun = pamsshagentauth_a2tun(sp, NULL);
+		pamsshagentauth_xfree(sp);
 		return (*remote == SSH_TUNID_ERR ? *remote : tun);
 	}
 
 	if (strcasecmp(s, "any") == 0)
 		return (SSH_TUNID_ANY);
 
-	tun = strtonum(s, 0, SSH_TUNID_MAX, &errstr);
+	tun = pamsshagentauth_strtonum(s, 0, SSH_TUNID_MAX, &errstr);
 	if (errstr != NULL)
 		return (SSH_TUNID_ERR);
 
@@ -299,7 +299,7 @@ a2tun(const char *s, int *remote)
  * Return -1 if time string is invalid.
  */
 long
-convtime(const char *s)
+pamsshagentauth_convtime(const char *s)
 {
 	long total, secs;
 	const char *p;
@@ -359,14 +359,14 @@ convtime(const char *s)
  * Caller must free returned string.
  */
 char *
-put_host_port(const char *host, u_short port)
+pamsshagentauth_put_host_port(const char *host, u_short port)
 {
 	char *hoststr;
 
 	if (port == 0 || port == SSH_DEFAULT_PORT)
-		return(xstrdup(host));
+		return(pamsshagentauth_xstrdup(host));
 	if (asprintf(&hoststr, "[%s]:%d", host, (int)port) < 0)
-		fatal("put_host_port: asprintf: %s", strerror(errno));
+		pamsshagentauth_fatal("put_host_port: asprintf: %s", strerror(errno));
 	pamsshagentauth_verbose("put_host_port: %s", hoststr);
 	return hoststr;
 }
@@ -379,7 +379,7 @@ put_host_port(const char *host, u_short port)
  * If this is the last field, *cp is set to NULL.
  */
 char *
-hpdelim(char **cp)
+pamsshagentauth_hpdelim(char **cp)
 {
 	char *s, *old;
 
@@ -414,7 +414,7 @@ hpdelim(char **cp)
 }
 
 char *
-cleanhostname(char *host)
+pamsshagentauth_cleanhostname(char *host)
 {
 	if (*host == '[' && host[strlen(host) - 1] == ']') {
 		host[strlen(host) - 1] = '\0';
@@ -424,7 +424,7 @@ cleanhostname(char *host)
 }
 
 char *
-colon(char *cp)
+pamsshagentauth_colon(char *cp)
 {
 	int flag = 0;
 
@@ -448,7 +448,7 @@ colon(char *cp)
 
 /* function to assist building execv() arguments */
 void
-addargs(arglist *args, char *fmt, ...)
+pamsshagentauth_addargs(arglist *args, char *fmt, ...)
 {
 	va_list ap;
 	char *cp;
@@ -459,7 +459,7 @@ addargs(arglist *args, char *fmt, ...)
 	r = vasprintf(&cp, fmt, ap);
 	va_end(ap);
 	if (r == -1)
-		fatal("addargs: argument too long");
+		pamsshagentauth_fatal("addargs: argument too long");
 
 	nalloc = args->nalloc;
 	if (args->list == NULL) {
@@ -468,14 +468,14 @@ addargs(arglist *args, char *fmt, ...)
 	} else if (args->num+2 >= nalloc)
 		nalloc *= 2;
 
-	args->list = xrealloc(args->list, nalloc, sizeof(char *));
+	args->list = pamsshagentauth_xrealloc(args->list, nalloc, sizeof(char *));
 	args->nalloc = nalloc;
 	args->list[args->num++] = cp;
 	args->list[args->num] = NULL;
 }
 
 void
-replacearg(arglist *args, u_int which, char *fmt, ...)
+pamsshagentauth_replacearg(arglist *args, u_int which, char *fmt, ...)
 {
 	va_list ap;
 	char *cp;
@@ -485,24 +485,24 @@ replacearg(arglist *args, u_int which, char *fmt, ...)
 	r = vasprintf(&cp, fmt, ap);
 	va_end(ap);
 	if (r == -1)
-		fatal("replacearg: argument too long");
+		pamsshagentauth_fatal("replacearg: argument too long");
 
 	if (which >= args->num)
-		fatal("replacearg: tried to replace invalid arg %d >= %d",
+		pamsshagentauth_fatal("replacearg: tried to replace invalid arg %d >= %d",
 		    which, args->num);
-	xfree(args->list[which]);
+	pamsshagentauth_xfree(args->list[which]);
 	args->list[which] = cp;
 }
 
 void
-freeargs(arglist *args)
+pamsshagentauth_freeargs(arglist *args)
 {
 	u_int i;
 
 	if (args->list != NULL) {
 		for (i = 0; i < args->num; i++)
-			xfree(args->list[i]);
-		xfree(args->list);
+			pamsshagentauth_xfree(args->list[i]);
+		pamsshagentauth_xfree(args->list);
 		args->nalloc = args->num = 0;
 		args->list = NULL;
 	}
@@ -513,7 +513,7 @@ freeargs(arglist *args)
  * Warning: this calls getpw*.
  */
 char *
-tilde_expand_filename(const char *filename, uid_t uid)
+pamsshagentauth_tilde_expand_filename(const char *filename, uid_t uid)
 {
 	const char *path;
 	char user[128], ret[MAXPATHLEN];
@@ -521,37 +521,37 @@ tilde_expand_filename(const char *filename, uid_t uid)
 	u_int len, slash;
 
 	if (*filename != '~')
-		return (xstrdup(filename));
+		return (pamsshagentauth_xstrdup(filename));
 	filename++;
 
 	path = strchr(filename, '/');
 	if (path != NULL && path > filename) {		/* ~user/path */
 		slash = path - filename;
 		if (slash > sizeof(user) - 1)
-			fatal("tilde_expand_filename: ~username too long");
+			pamsshagentauth_fatal("tilde_expand_filename: ~username too long");
 		memcpy(user, filename, slash);
 		user[slash] = '\0';
 		if ((pw = getpwnam(user)) == NULL)
-			fatal("tilde_expand_filename: No such user %s", user);
+			pamsshagentauth_fatal("tilde_expand_filename: No such user %s", user);
 	} else if ((pw = getpwuid(uid)) == NULL)	/* ~/path */
-		fatal("tilde_expand_filename: No such uid %lu", (unsigned long) uid);
+		pamsshagentauth_fatal("tilde_expand_filename: No such uid %lu", (unsigned long) uid);
 
-	if (strlcpy(ret, pw->pw_dir, sizeof(ret)) >= sizeof(ret))
-		fatal("tilde_expand_filename: Path too long");
+	if (pamsshagentauth_strlcpy(ret, pw->pw_dir, sizeof(ret)) >= sizeof(ret))
+		pamsshagentauth_fatal("tilde_expand_filename: Path too long");
 
 	/* Make sure directory has a trailing '/' */
 	len = strlen(pw->pw_dir);
 	if ((len == 0 || pw->pw_dir[len - 1] != '/') &&
-	    strlcat(ret, "/", sizeof(ret)) >= sizeof(ret))
-		fatal("tilde_expand_filename: Path too long");
+	    pamsshagentauth_strlcat(ret, "/", sizeof(ret)) >= sizeof(ret))
+		pamsshagentauth_fatal("tilde_expand_filename: Path too long");
 
 	/* Skip leading '/' from specified path */
 	if (path != NULL)
 		filename = path + 1;
-	if (strlcat(ret, filename, sizeof(ret)) >= sizeof(ret))
-		fatal("tilde_expand_filename: Path too long");
+	if (pamsshagentauth_strlcat(ret, filename, sizeof(ret)) >= sizeof(ret))
+		pamsshagentauth_fatal("tilde_expand_filename: Path too long");
 
-	return (xstrdup(ret));
+	return (pamsshagentauth_xstrdup(ret));
 }
 
 /*
@@ -561,7 +561,7 @@ tilde_expand_filename(const char *filename, uid_t uid)
  * allocated by xmalloc.
  */
 char *
-percent_expand(const char *string, ...)
+pamsshagentauth_percent_expand(const char *string, ...)
 {
 #define EXPAND_MAX_KEYS	16
 	struct {
@@ -580,12 +580,12 @@ percent_expand(const char *string, ...)
 			break;
 		keys[num_keys].repl = va_arg(ap, char *);
 		if (keys[num_keys].repl == NULL)
-			fatal("percent_expand: NULL replacement");
+			pamsshagentauth_fatal("percent_expand: NULL replacement");
 	}
 	va_end(ap);
 
 	if (num_keys >= EXPAND_MAX_KEYS)
-		fatal("percent_expand: too many keys");
+		pamsshagentauth_fatal("percent_expand: too many keys");
 
 	/* Expand string */
 	*buf = '\0';
@@ -594,7 +594,7 @@ percent_expand(const char *string, ...)
  append:
 			buf[i++] = *string;
 			if (i >= sizeof(buf))
-				fatal("percent_expand: string too long");
+				pamsshagentauth_fatal("percent_expand: string too long");
 			buf[i] = '\0';
 			continue;
 		}
@@ -603,16 +603,16 @@ percent_expand(const char *string, ...)
 			goto append;
 		for (j = 0; j < num_keys; j++) {
 			if (strchr(keys[j].key, *string) != NULL) {
-				i = strlcat(buf, keys[j].repl, sizeof(buf));
+				i = pamsshagentauth_strlcat(buf, keys[j].repl, sizeof(buf));
 				if (i >= sizeof(buf))
-					fatal("percent_expand: string too long");
+					pamsshagentauth_fatal("percent_expand: string too long");
 				break;
 			}
 		}
 		if (j >= num_keys)
-			fatal("percent_expand: unknown key %%%c", *string);
+			pamsshagentauth_fatal("percent_expand: unknown key %%%c", *string);
 	}
-	return (xstrdup(buf));
+	return (pamsshagentauth_xstrdup(buf));
 #undef EXPAND_MAX_KEYS
 }
 
@@ -642,7 +642,7 @@ read_keyfile_line(FILE *f, const char *filename, char *buf, size_t bufsz,
 }
 
 int
-tun_open(int tun, int mode)
+pamsshagentauth_tun_open(int tun, int mode)
 {
 #if defined(CUSTOM_SYS_TUN_OPEN)
 	return (sys_tun_open(tun, mode));
@@ -713,7 +713,7 @@ tun_open(int tun, int mode)
 }
 
 void
-sanitise_stdfd(void)
+pamsshagentauth_sanitise_stdfd(void)
 {
 	int nullfd, dupfd;
 
@@ -735,26 +735,26 @@ sanitise_stdfd(void)
 }
 
 char *
-tohex(const void *vp, size_t l)
+pamsshagentauth_tohex(const void *vp, size_t l)
 {
 	const u_char *p = (const u_char *)vp;
 	char b[3], *r;
 	size_t i, hl;
 
 	if (l > 65536)
-		return xstrdup("tohex: length > 65536");
+		return pamsshagentauth_xstrdup("tohex: length > 65536");
 
 	hl = l * 2 + 1;
-	r = xcalloc(1, hl);
+	r = pamsshagentauth_xcalloc(1, hl);
 	for (i = 0; i < l; i++) {
 		snprintf(b, sizeof(b), "%02x", p[i]);
-		strlcat(r, b, hl);
+		pamsshagentauth_strlcat(r, b, hl);
 	}
 	return (r);
 }
 
 u_int64_t
-get_u64(const void *vp)
+pamsshagentauth_get_u64(const void *vp)
 {
 	const u_char *p = (const u_char *)vp;
 	u_int64_t v;
@@ -772,7 +772,7 @@ get_u64(const void *vp)
 }
 
 u_int32_t
-get_u32(const void *vp)
+pamsshagentauth_get_u32(const void *vp)
 {
 	const u_char *p = (const u_char *)vp;
 	u_int32_t v;
@@ -786,7 +786,7 @@ get_u32(const void *vp)
 }
 
 u_int16_t
-get_u16(const void *vp)
+pamsshagentauth_get_u16(const void *vp)
 {
 	const u_char *p = (const u_char *)vp;
 	u_int16_t v;
@@ -798,7 +798,7 @@ get_u16(const void *vp)
 }
 
 void
-put_u64(void *vp, u_int64_t v)
+pamsshagentauth_put_u64(void *vp, u_int64_t v)
 {
 	u_char *p = (u_char *)vp;
 
@@ -813,7 +813,7 @@ put_u64(void *vp, u_int64_t v)
 }
 
 void
-put_u32(void *vp, u_int32_t v)
+pamsshagentauth_put_u32(void *vp, u_int32_t v)
 {
 	u_char *p = (u_char *)vp;
 
@@ -825,7 +825,7 @@ put_u32(void *vp, u_int32_t v)
 
 
 void
-put_u16(void *vp, u_int16_t v)
+pamsshagentauth_put_u16(void *vp, u_int16_t v)
 {
 	u_char *p = (u_char *)vp;
 

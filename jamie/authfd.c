@@ -74,7 +74,7 @@
 static int agent_present = 0;
 
 /* helper */
-int	decode_reply(int type);
+int	pamsshagentauth_decode_reply(int type);
 
 /* macro to check for "agent failure" message */
 #define agent_failed(x) \
@@ -116,7 +116,7 @@ ssh_get_authentication_socket(uid_t uid)
     /* Advisory only; seteuid ensures no race condition; but will only log if we see EACCES */
     if( stat(authsocket,&sock_st) == 0) {
         if(uid != 0 && sock_st.st_uid != uid) {
-            fatal("uid %lu attempted to open an agent socket owned by uid %lu", (unsigned long) uid, (unsigned long) sock_st.st_uid);
+            pamsshagentauth_fatal("uid %lu attempted to open an agent socket owned by uid %lu", (unsigned long) uid, (unsigned long) sock_st.st_uid);
             return -1;
         }
     }
@@ -131,7 +131,7 @@ ssh_get_authentication_socket(uid_t uid)
     }
 
 	sunaddr.sun_family = AF_UNIX;
-	strlcpy(sunaddr.sun_path, authsocket, sizeof(sunaddr.sun_path));
+	pamsshagentauth_strlcpy(sunaddr.sun_path, authsocket, sizeof(sunaddr.sun_path));
 
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock < 0)
@@ -149,7 +149,7 @@ ssh_get_authentication_socket(uid_t uid)
 	if (connect(sock, (struct sockaddr *)&sunaddr, sizeof sunaddr) < 0) {
 		close(sock);
         if(errno == EACCES)
-            fatal("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
+            pamsshagentauth_fatal("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
 		return -1;
 	}
 
@@ -166,13 +166,13 @@ ssh_request_reply(AuthenticationConnection *auth, Buffer *request, Buffer *reply
 	char buf[1024];
 
 	/* Get the length of the message, and format it in the buffer. */
-	len = buffer_len(request);
-	put_u32(buf, len);
+	len = pamsshagentauth_buffer_len(request);
+	pamsshagentauth_put_u32(buf, len);
 
 	/* Send the length and then the packet to the agent. */
-	if (atomicio(vwrite, auth->fd, buf, 4) != 4 ||
-	    atomicio(vwrite, auth->fd, buffer_ptr(request),
-	    buffer_len(request)) != buffer_len(request)) {
+	if (pamsshagentauth_atomicio(vwrite, auth->fd, buf, 4) != 4 ||
+	    pamsshagentauth_atomicio(vwrite, auth->fd, pamsshagentauth_buffer_ptr(request),
+	    pamsshagentauth_buffer_len(request)) != pamsshagentauth_buffer_len(request)) {
 		pamsshagentauth_logerror("Error writing to authentication socket.");
 		return 0;
 	}
@@ -180,27 +180,27 @@ ssh_request_reply(AuthenticationConnection *auth, Buffer *request, Buffer *reply
 	 * Wait for response from the agent.  First read the length of the
 	 * response packet.
 	 */
-	if (atomicio(read, auth->fd, buf, 4) != 4) {
+	if (pamsshagentauth_atomicio(read, auth->fd, buf, 4) != 4) {
 	    pamsshagentauth_logerror("Error reading response length from authentication socket.");
 	    return 0;
 	}
 
 	/* Extract the length, and check it for sanity. */
-	len = get_u32(buf);
+	len = pamsshagentauth_get_u32(buf);
 	if (len > 256 * 1024)
-		fatal("Authentication response too long: %u", len);
+		pamsshagentauth_fatal("Authentication response too long: %u", len);
 
 	/* Read the rest of the response in to the buffer. */
-	buffer_clear(reply);
+	pamsshagentauth_buffer_clear(reply);
 	while (len > 0) {
 		l = len;
 		if (l > sizeof(buf))
 			l = sizeof(buf);
-		if (atomicio(read, auth->fd, buf, l) != l) {
+		if (pamsshagentauth_atomicio(read, auth->fd, buf, l) != l) {
 			pamsshagentauth_logerror("Error reading response from authentication socket.");
 			return 0;
 		}
-		buffer_append(reply, buf, l);
+		pamsshagentauth_buffer_append(reply, buf, l);
 		len -= l;
 	}
 	return 1;
@@ -242,9 +242,9 @@ ssh_get_authentication_connection(uid_t uid)
 	if (sock < 0)
 		return NULL;
 
-	auth = xmalloc(sizeof(*auth));
+	auth = pamsshagentauth_xmalloc(sizeof(*auth));
 	auth->fd = sock;
-	buffer_init(&auth->identities);
+	pamsshagentauth_buffer_init(&auth->identities);
 	auth->howmany = 0;
 
 	return auth;
@@ -258,9 +258,9 @@ ssh_get_authentication_connection(uid_t uid)
 void
 ssh_close_authentication_connection(AuthenticationConnection *auth)
 {
-	buffer_free(&auth->identities);
+	pamsshagentauth_buffer_free(&auth->identities);
 	close(auth->fd);
-	xfree(auth);
+	pamsshagentauth_xfree(auth);
 }
 
 /* Lock/unlock agent */
@@ -270,17 +270,17 @@ ssh_lock_agent(AuthenticationConnection *auth, int lock, const char *password)
 	int type;
 	Buffer msg;
 
-	buffer_init(&msg);
-	buffer_put_char(&msg, lock ? SSH_AGENTC_LOCK : SSH_AGENTC_UNLOCK);
-	buffer_put_cstring(&msg, password);
+	pamsshagentauth_buffer_init(&msg);
+	pamsshagentauth_buffer_put_char(&msg, lock ? SSH_AGENTC_LOCK : SSH_AGENTC_UNLOCK);
+	pamsshagentauth_buffer_put_cstring(&msg, password);
 
 	if (ssh_request_reply(auth, &msg, &msg) == 0) {
-		buffer_free(&msg);
+		pamsshagentauth_buffer_free(&msg);
 		return 0;
 	}
-	type = buffer_get_char(&msg);
-	buffer_free(&msg);
-	return decode_reply(type);
+	type = pamsshagentauth_buffer_get_char(&msg);
+	pamsshagentauth_buffer_free(&msg);
+	return pamsshagentauth_decode_reply(type);
 }
 
 /*
@@ -310,28 +310,28 @@ ssh_get_num_identities(AuthenticationConnection *auth, int version)
 	 * Send a message to the agent requesting for a list of the
 	 * identities it can represent.
 	 */
-	buffer_init(&request);
-	buffer_put_char(&request, code1);
+	pamsshagentauth_buffer_init(&request);
+	pamsshagentauth_buffer_put_char(&request, code1);
 
-	buffer_clear(&auth->identities);
+	pamsshagentauth_buffer_clear(&auth->identities);
 	if (ssh_request_reply(auth, &request, &auth->identities) == 0) {
-		buffer_free(&request);
+		pamsshagentauth_buffer_free(&request);
 		return 0;
 	}
-	buffer_free(&request);
+	pamsshagentauth_buffer_free(&request);
 
 	/* Get message type, and verify that we got a proper answer. */
-	type = buffer_get_char(&auth->identities);
+	type = pamsshagentauth_buffer_get_char(&auth->identities);
 	if (agent_failed(type)) {
 		return 0;
 	} else if (type != code2) {
-		fatal("Bad authentication reply message type: %d", type);
+		pamsshagentauth_fatal("Bad authentication reply message type: %d", type);
 	}
 
 	/* Get the number of entries in the response and check it for sanity. */
-	auth->howmany = buffer_get_int(&auth->identities);
+	auth->howmany = pamsshagentauth_buffer_get_int(&auth->identities);
 	if ((u_int)auth->howmany > 1024)
-		fatal("Too many identities in authentication reply: %d",
+		pamsshagentauth_fatal("Too many identities in authentication reply: %d",
 		    auth->howmany);
 
 	return auth->howmany;
@@ -365,21 +365,21 @@ ssh_get_next_identity(AuthenticationConnection *auth, char **comment, int versio
 	 */
 	switch (version) {
 	case 1:
-		key = key_new(KEY_RSA1);
-		bits = buffer_get_int(&auth->identities);
-		buffer_get_bignum(&auth->identities, key->rsa->e);
-		buffer_get_bignum(&auth->identities, key->rsa->n);
-		*comment = buffer_get_string(&auth->identities, NULL);
+		key = pamsshagentauth_key_new(KEY_RSA1);
+		bits = pamsshagentauth_buffer_get_int(&auth->identities);
+		pamsshagentauth_buffer_get_bignum(&auth->identities, key->rsa->e);
+		pamsshagentauth_buffer_get_bignum(&auth->identities, key->rsa->n);
+		*comment = pamsshagentauth_buffer_get_string(&auth->identities, NULL);
 		keybits = BN_num_bits(key->rsa->n);
 		if (keybits < 0 || bits != (u_int)keybits)
 			pamsshagentauth_logit("Warning: identity keysize mismatch: actual %d, announced %u",
 			    BN_num_bits(key->rsa->n), bits);
 		break;
 	case 2:
-		blob = buffer_get_string(&auth->identities, &blen);
-		*comment = buffer_get_string(&auth->identities, NULL);
-		key = key_from_blob(blob, blen);
-		xfree(blob);
+		blob = pamsshagentauth_buffer_get_string(&auth->identities, &blen);
+		*comment = pamsshagentauth_buffer_get_string(&auth->identities, NULL);
+		key = pamsshagentauth_key_from_blob(blob, blen);
+		pamsshagentauth_xfree(blob);
 		break;
 	default:
 		return NULL;
@@ -415,25 +415,25 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 		pamsshagentauth_logit("Compatibility with ssh protocol version 1.0 no longer supported.");
 		return 0;
 	}
-	buffer_init(&buffer);
-	buffer_put_char(&buffer, SSH_AGENTC_RSA_CHALLENGE);
-	buffer_put_int(&buffer, BN_num_bits(key->rsa->n));
-	buffer_put_bignum(&buffer, key->rsa->e);
-	buffer_put_bignum(&buffer, key->rsa->n);
-	buffer_put_bignum(&buffer, challenge);
-	buffer_append(&buffer, session_id, 16);
-	buffer_put_int(&buffer, response_type);
+	pamsshagentauth_buffer_init(&buffer);
+	pamsshagentauth_buffer_put_char(&buffer, SSH_AGENTC_RSA_CHALLENGE);
+	pamsshagentauth_buffer_put_int(&buffer, BN_num_bits(key->rsa->n));
+	pamsshagentauth_buffer_put_bignum(&buffer, key->rsa->e);
+	pamsshagentauth_buffer_put_bignum(&buffer, key->rsa->n);
+	pamsshagentauth_buffer_put_bignum(&buffer, challenge);
+	pamsshagentauth_buffer_append(&buffer, session_id, 16);
+	pamsshagentauth_buffer_put_int(&buffer, response_type);
 
 	if (ssh_request_reply(auth, &buffer, &buffer) == 0) {
-		buffer_free(&buffer);
+		pamsshagentauth_buffer_free(&buffer);
 		return 0;
 	}
-	type = buffer_get_char(&buffer);
+	type = pamsshagentauth_buffer_get_char(&buffer);
 
 	if (agent_failed(type)) {
 		pamsshagentauth_logit("Agent admitted failure to authenticate using the key.");
 	} else if (type != SSH_AGENT_RSA_RESPONSE) {
-		fatal("Bad authentication response: %d", type);
+		pamsshagentauth_fatal("Bad authentication response: %d", type);
 	} else {
 		success = 1;
 		/*
@@ -441,9 +441,9 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 		 * fatal error if the packet is corrupt.
 		 */
 		for (i = 0; i < 16; i++)
-			response[i] = (u_char)buffer_get_char(&buffer);
+			response[i] = (u_char)pamsshagentauth_buffer_get_char(&buffer);
 	}
-	buffer_free(&buffer);
+	pamsshagentauth_buffer_free(&buffer);
 	return success;
 }
 
@@ -461,33 +461,33 @@ ssh_agent_sign(AuthenticationConnection *auth,
 	int type, flags = 0;
 	int ret = -1;
 
-	if (key_to_blob(key, &blob, &blen) == 0)
+	if (pamsshagentauth_key_to_blob(key, &blob, &blen) == 0)
 		return -1;
 
 	if (datafellows & SSH_BUG_SIGBLOB)
 		flags = SSH_AGENT_OLD_SIGNATURE;
 
-	buffer_init(&msg);
-	buffer_put_char(&msg, SSH2_AGENTC_SIGN_REQUEST);
-	buffer_put_string(&msg, blob, blen);
-	buffer_put_string(&msg, data, datalen);
-	buffer_put_int(&msg, flags);
-	xfree(blob);
+	pamsshagentauth_buffer_init(&msg);
+	pamsshagentauth_buffer_put_char(&msg, SSH2_AGENTC_SIGN_REQUEST);
+	pamsshagentauth_buffer_put_string(&msg, blob, blen);
+	pamsshagentauth_buffer_put_string(&msg, data, datalen);
+	pamsshagentauth_buffer_put_int(&msg, flags);
+	pamsshagentauth_xfree(blob);
 
 	if (ssh_request_reply(auth, &msg, &msg) == 0) {
-		buffer_free(&msg);
+		pamsshagentauth_buffer_free(&msg);
 		return -1;
 	}
-	type = buffer_get_char(&msg);
+	type = pamsshagentauth_buffer_get_char(&msg);
 	if (agent_failed(type)) {
 		pamsshagentauth_logit("Agent admitted failure to sign using the key.");
 	} else if (type != SSH2_AGENT_SIGN_RESPONSE) {
-		fatal("Bad authentication response: %d", type);
+		pamsshagentauth_fatal("Bad authentication response: %d", type);
 	} else {
 		ret = 0;
-		*sigp = buffer_get_string(&msg, lenp);
+		*sigp = pamsshagentauth_buffer_get_string(&msg, lenp);
 	}
-	buffer_free(&msg);
+	pamsshagentauth_buffer_free(&msg);
 	return ret;
 }
 
@@ -496,39 +496,39 @@ ssh_agent_sign(AuthenticationConnection *auth,
 static void
 ssh_encode_identity_rsa1(Buffer *b, RSA *key, const char *comment)
 {
-	buffer_put_int(b, BN_num_bits(key->n));
-	buffer_put_bignum(b, key->n);
-	buffer_put_bignum(b, key->e);
-	buffer_put_bignum(b, key->d);
+	pamsshagentauth_buffer_put_int(b, BN_num_bits(key->n));
+	pamsshagentauth_buffer_put_bignum(b, key->n);
+	pamsshagentauth_buffer_put_bignum(b, key->e);
+	pamsshagentauth_buffer_put_bignum(b, key->d);
 	/* To keep within the protocol: p < q for ssh. in SSL p > q */
-	buffer_put_bignum(b, key->iqmp);	/* ssh key->u */
-	buffer_put_bignum(b, key->q);	/* ssh key->p, SSL key->q */
-	buffer_put_bignum(b, key->p);	/* ssh key->q, SSL key->p */
-	buffer_put_cstring(b, comment);
+	pamsshagentauth_buffer_put_bignum(b, key->iqmp);	/* ssh key->u */
+	pamsshagentauth_buffer_put_bignum(b, key->q);	/* ssh key->p, SSL key->q */
+	pamsshagentauth_buffer_put_bignum(b, key->p);	/* ssh key->q, SSL key->p */
+	pamsshagentauth_buffer_put_cstring(b, comment);
 }
 
 static void
 ssh_encode_identity_ssh2(Buffer *b, Key *key, const char *comment)
 {
-	buffer_put_cstring(b, key_ssh_name(key));
+	pamsshagentauth_buffer_put_cstring(b, key_ssh_name(key));
 	switch (key->type) {
 	case KEY_RSA:
-		buffer_put_bignum2(b, key->rsa->n);
-		buffer_put_bignum2(b, key->rsa->e);
-		buffer_put_bignum2(b, key->rsa->d);
-		buffer_put_bignum2(b, key->rsa->iqmp);
-		buffer_put_bignum2(b, key->rsa->p);
-		buffer_put_bignum2(b, key->rsa->q);
+		pamsshagentauth_buffer_put_bignum2(b, key->rsa->n);
+		pamsshagentauth_buffer_put_bignum2(b, key->rsa->e);
+		pamsshagentauth_buffer_put_bignum2(b, key->rsa->d);
+		pamsshagentauth_buffer_put_bignum2(b, key->rsa->iqmp);
+		pamsshagentauth_buffer_put_bignum2(b, key->rsa->p);
+		pamsshagentauth_buffer_put_bignum2(b, key->rsa->q);
 		break;
 	case KEY_DSA:
-		buffer_put_bignum2(b, key->dsa->p);
-		buffer_put_bignum2(b, key->dsa->q);
-		buffer_put_bignum2(b, key->dsa->g);
-		buffer_put_bignum2(b, key->dsa->pub_key);
-		buffer_put_bignum2(b, key->dsa->priv_key);
+		pamsshagentauth_buffer_put_bignum2(b, key->dsa->p);
+		pamsshagentauth_buffer_put_bignum2(b, key->dsa->q);
+		pamsshagentauth_buffer_put_bignum2(b, key->dsa->g);
+		pamsshagentauth_buffer_put_bignum2(b, key->dsa->pub_key);
+		pamsshagentauth_buffer_put_bignum2(b, key->dsa->priv_key);
 		break;
 	}
-	buffer_put_cstring(b, comment);
+	pamsshagentauth_buffer_put_cstring(b, comment);
 }
 
 /*
@@ -543,14 +543,14 @@ ssh_add_identity_constrained(AuthenticationConnection *auth, Key *key,
 	Buffer msg;
 	int type, constrained = (life || confirm);
 
-	buffer_init(&msg);
+	pamsshagentauth_buffer_init(&msg);
 
 	switch (key->type) {
 	case KEY_RSA1:
 		type = constrained ?
 		    SSH_AGENTC_ADD_RSA_ID_CONSTRAINED :
 		    SSH_AGENTC_ADD_RSA_IDENTITY;
-		buffer_put_char(&msg, type);
+		pamsshagentauth_buffer_put_char(&msg, type);
 		ssh_encode_identity_rsa1(&msg, key->rsa, comment);
 		break;
 	case KEY_RSA:
@@ -558,28 +558,28 @@ ssh_add_identity_constrained(AuthenticationConnection *auth, Key *key,
 		type = constrained ?
 		    SSH2_AGENTC_ADD_ID_CONSTRAINED :
 		    SSH2_AGENTC_ADD_IDENTITY;
-		buffer_put_char(&msg, type);
+		pamsshagentauth_buffer_put_char(&msg, type);
 		ssh_encode_identity_ssh2(&msg, key, comment);
 		break;
 	default:
-		buffer_free(&msg);
+		pamsshagentauth_buffer_free(&msg);
 		return 0;
 	}
 	if (constrained) {
 		if (life != 0) {
-			buffer_put_char(&msg, SSH_AGENT_CONSTRAIN_LIFETIME);
-			buffer_put_int(&msg, life);
+			pamsshagentauth_buffer_put_char(&msg, SSH_AGENT_CONSTRAIN_LIFETIME);
+			pamsshagentauth_buffer_put_int(&msg, life);
 		}
 		if (confirm != 0)
-			buffer_put_char(&msg, SSH_AGENT_CONSTRAIN_CONFIRM);
+			pamsshagentauth_buffer_put_char(&msg, SSH_AGENT_CONSTRAIN_CONFIRM);
 	}
 	if (ssh_request_reply(auth, &msg, &msg) == 0) {
-		buffer_free(&msg);
+		pamsshagentauth_buffer_free(&msg);
 		return 0;
 	}
-	type = buffer_get_char(&msg);
-	buffer_free(&msg);
-	return decode_reply(type);
+	type = pamsshagentauth_buffer_get_char(&msg);
+	pamsshagentauth_buffer_free(&msg);
+	return pamsshagentauth_decode_reply(type);
 }
 
 int
@@ -601,29 +601,29 @@ ssh_remove_identity(AuthenticationConnection *auth, Key *key)
 	u_char *blob;
 	u_int blen;
 
-	buffer_init(&msg);
+	pamsshagentauth_buffer_init(&msg);
 
 	if (key->type == KEY_RSA1) {
-		buffer_put_char(&msg, SSH_AGENTC_REMOVE_RSA_IDENTITY);
-		buffer_put_int(&msg, BN_num_bits(key->rsa->n));
-		buffer_put_bignum(&msg, key->rsa->e);
-		buffer_put_bignum(&msg, key->rsa->n);
+		pamsshagentauth_buffer_put_char(&msg, SSH_AGENTC_REMOVE_RSA_IDENTITY);
+		pamsshagentauth_buffer_put_int(&msg, BN_num_bits(key->rsa->n));
+		pamsshagentauth_buffer_put_bignum(&msg, key->rsa->e);
+		pamsshagentauth_buffer_put_bignum(&msg, key->rsa->n);
 	} else if (key->type == KEY_DSA || key->type == KEY_RSA) {
-		key_to_blob(key, &blob, &blen);
-		buffer_put_char(&msg, SSH2_AGENTC_REMOVE_IDENTITY);
-		buffer_put_string(&msg, blob, blen);
-		xfree(blob);
+		pamsshagentauth_key_to_blob(key, &blob, &blen);
+		pamsshagentauth_buffer_put_char(&msg, SSH2_AGENTC_REMOVE_IDENTITY);
+		pamsshagentauth_buffer_put_string(&msg, blob, blen);
+		pamsshagentauth_xfree(blob);
 	} else {
-		buffer_free(&msg);
+		pamsshagentauth_buffer_free(&msg);
 		return 0;
 	}
 	if (ssh_request_reply(auth, &msg, &msg) == 0) {
-		buffer_free(&msg);
+		pamsshagentauth_buffer_free(&msg);
 		return 0;
 	}
-	type = buffer_get_char(&msg);
-	buffer_free(&msg);
-	return decode_reply(type);
+	type = pamsshagentauth_buffer_get_char(&msg);
+	pamsshagentauth_buffer_free(&msg);
+	return pamsshagentauth_decode_reply(type);
 }
 
 int
@@ -640,27 +640,27 @@ ssh_update_card(AuthenticationConnection *auth, int add,
 	} else
 		type = SSH_AGENTC_REMOVE_SMARTCARD_KEY;
 
-	buffer_init(&msg);
-	buffer_put_char(&msg, type);
-	buffer_put_cstring(&msg, reader_id);
-	buffer_put_cstring(&msg, pin);
+	pamsshagentauth_buffer_init(&msg);
+	pamsshagentauth_buffer_put_char(&msg, type);
+	pamsshagentauth_buffer_put_cstring(&msg, reader_id);
+	pamsshagentauth_buffer_put_cstring(&msg, pin);
 
 	if (constrained) {
 		if (life != 0) {
-			buffer_put_char(&msg, SSH_AGENT_CONSTRAIN_LIFETIME);
-			buffer_put_int(&msg, life);
+			pamsshagentauth_buffer_put_char(&msg, SSH_AGENT_CONSTRAIN_LIFETIME);
+			pamsshagentauth_buffer_put_int(&msg, life);
 		}
 		if (confirm != 0)
-			buffer_put_char(&msg, SSH_AGENT_CONSTRAIN_CONFIRM);
+			pamsshagentauth_buffer_put_char(&msg, SSH_AGENT_CONSTRAIN_CONFIRM);
 	}
 
 	if (ssh_request_reply(auth, &msg, &msg) == 0) {
-		buffer_free(&msg);
+		pamsshagentauth_buffer_free(&msg);
 		return 0;
 	}
-	type = buffer_get_char(&msg);
-	buffer_free(&msg);
-	return decode_reply(type);
+	type = pamsshagentauth_buffer_get_char(&msg);
+	pamsshagentauth_buffer_free(&msg);
+	return pamsshagentauth_decode_reply(type);
 }
 
 /*
@@ -677,20 +677,20 @@ ssh_remove_all_identities(AuthenticationConnection *auth, int version)
 		SSH_AGENTC_REMOVE_ALL_RSA_IDENTITIES :
 		SSH2_AGENTC_REMOVE_ALL_IDENTITIES;
 
-	buffer_init(&msg);
-	buffer_put_char(&msg, code);
+	pamsshagentauth_buffer_init(&msg);
+	pamsshagentauth_buffer_put_char(&msg, code);
 
 	if (ssh_request_reply(auth, &msg, &msg) == 0) {
-		buffer_free(&msg);
+		pamsshagentauth_buffer_free(&msg);
 		return 0;
 	}
-	type = buffer_get_char(&msg);
-	buffer_free(&msg);
-	return decode_reply(type);
+	type = pamsshagentauth_buffer_get_char(&msg);
+	pamsshagentauth_buffer_free(&msg);
+	return pamsshagentauth_decode_reply(type);
 }
 
 int
-decode_reply(int type)
+pamsshagentauth_decode_reply(int type)
 {
 	switch (type) {
 	case SSH_AGENT_FAILURE:
@@ -701,7 +701,7 @@ decode_reply(int type)
 	case SSH_AGENT_SUCCESS:
 		return 1;
 	default:
-		fatal("Bad response from authentication agent: %d", type);
+		pamsshagentauth_fatal("Bad response from authentication agent: %d", type);
 	}
 	/* NOTREACHED */
 	return 0;

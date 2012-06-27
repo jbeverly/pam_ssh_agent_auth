@@ -76,15 +76,15 @@ aix_usrinfo(struct passwd *pw)
 	char *cp;
 
 	len = sizeof("LOGNAME= NAME= ") + (2 * strlen(pw->pw_name));
-	cp = xmalloc(len);
+	cp = pamsshagentauth_xmalloc(len);
 
 	i = snprintf(cp, len, "LOGNAME=%s%cNAME=%s%c", pw->pw_name, '\0',
 	    pw->pw_name, '\0');
 	if (usrinfo(SETUINFO, cp, i) == -1)
-		fatal("Couldn't set usrinfo: %s", strerror(errno));
+		pamsshagentauth_fatal("Couldn't set usrinfo: %s", strerror(errno));
 	pamsshagentauth_verbose("AIX/UsrInfo: set len %d", i);
 
-	xfree(cp);
+	pamsshagentauth_xfree(cp);
 }
 
 # ifdef WITH_AIXAUTHENTICATE
@@ -199,7 +199,7 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 		 */
 		expired = passwdexpired(name, &msg);
 		if (msg && *msg) {
-			buffer_append(ctxt->loginmsg, msg, strlen(msg));
+			pamsshagentauth_buffer_append(ctxt->loginmsg, msg, strlen(msg));
 			aix_remove_embedded_newlines(msg);
 		}
 		pamsshagentauth_verbose("AIX/passwdexpired returned %d msg %.100s", expired, msg);
@@ -214,7 +214,7 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 			pamsshagentauth_logit("Password can't be changed for user %s: %.100s",
 			    name, msg);
 			if (msg)
-				xfree(msg);
+				pamsshagentauth_xfree(msg);
 			authsuccess = 0;
 		}
 
@@ -222,7 +222,7 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 	}
 
 	if (authmsg != NULL)
-		xfree(authmsg);
+		pamsshagentauth_xfree(authmsg);
 
 	return authsuccess;
 }
@@ -259,15 +259,15 @@ sys_auth_allowed_user(struct passwd *pw, Buffer *loginmsg)
 	if (result == -1 && errno == EPERM && stat(_PATH_NOLOGIN, &st) == 0)
 		permitted = 1;
 	else if (msg != NULL)
-		buffer_append(loginmsg, msg, strlen(msg));
+		pamsshagentauth_buffer_append(loginmsg, msg, strlen(msg));
 	if (msg == NULL)
-		msg = xstrdup("(none)");
+		msg = pamsshagentauth_xstrdup("(none)");
 	aix_remove_embedded_newlines(msg);
 	pamsshagentauth_verbose("AIX/loginrestrictions returned %d msg %.100s", result, msg);
 
 	if (!permitted)
 		pamsshagentauth_logit("Login restricted for %s: %.100s", pw->pw_name, msg);
-	xfree(msg);
+	pamsshagentauth_xfree(msg);
 	return permitted;
 }
 
@@ -284,8 +284,8 @@ sys_auth_record_login(const char *user, const char *host, const char *ttynm,
 		success = 1;
 		if (msg != NULL && loginmsg != NULL && !msg_done) {
 			pamsshagentauth_verbose("AIX/loginsuccess: msg %s", msg);
-			buffer_append(loginmsg, msg, strlen(msg));
-			xfree(msg);
+			pamsshagentauth_buffer_append(loginmsg, msg, strlen(msg));
+			pamsshagentauth_xfree(msg);
 			msg_done = 1;
 		}
 	}
@@ -385,7 +385,7 @@ sshaix_getnameinfo(const struct sockaddr *sa, size_t salen, char *host,
 		a6 = sa6->sin6_addr.u6_addr.u6_addr32;
 
 		if (a6[0] == 0 && a6[1] == 0 && a6[2] == 0 && a6[3] == 0) {
-			strlcpy(host, "::", hostlen);
+			pamsshagentauth_strlcpy(host, "::", hostlen);
 			snprintf(serv, servlen, "%d", sa6->sin6_port);
 			return 0;
 		}

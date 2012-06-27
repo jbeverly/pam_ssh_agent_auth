@@ -34,20 +34,20 @@
 #include "uuencode.h"
 
 int
-uuencode(const u_char *src, u_int srclength,
+pamsshagentauth_uuencode(const u_char *src, u_int srclength,
     char *target, size_t targsize)
 {
-	return __b64_ntop(src, srclength, target, targsize);
+	return pamsshagentauth___b64_ntop(src, srclength, target, targsize);
 }
 
 int
-uudecode(const char *src, u_char *target, size_t targsize)
+pamsshagentauth_uudecode(const char *src, u_char *target, size_t targsize)
 {
 	int len;
 	char *encoded, *p;
 
 	/* copy the 'readonly' source */
-	encoded = xstrdup(src);
+	encoded = pamsshagentauth_xstrdup(src);
 	/* skip whitespace and data */
 	for (p = encoded; *p == ' ' || *p == '\t'; p++)
 		;
@@ -55,13 +55,13 @@ uudecode(const char *src, u_char *target, size_t targsize)
 		;
 	/* and remove trailing whitespace because __b64_pton needs this */
 	*p = '\0';
-	len = __b64_pton(encoded, target, targsize);
-	xfree(encoded);
+	len = pamsshagentauth___b64_pton(encoded, target, targsize);
+	pamsshagentauth_xfree(encoded);
 	return len;
 }
 
 void
-dump_base64(FILE *fp, u_char *data, u_int len)
+pamsshagentauth_dump_base64(FILE *fp, u_char *data, u_int len)
 {
 	char *buf;
 	int i, n;
@@ -70,8 +70,8 @@ dump_base64(FILE *fp, u_char *data, u_int len)
 		fprintf(fp, "dump_base64: len > 65536\n");
 		return;
 	}
-	buf = xmalloc(2*len);
-	n = uuencode(data, len, buf, 2*len);
+	buf = pamsshagentauth_xmalloc(2*len);
+	n = pamsshagentauth_uuencode(data, len, buf, 2*len);
 	for (i = 0; i < n; i++) {
 		fprintf(fp, "%c", buf[i]);
 		if (i % 70 == 69)
@@ -79,5 +79,5 @@ dump_base64(FILE *fp, u_char *data, u_int len)
 	}
 	if (i % 70 != 69)
 		fprintf(fp, "\n");
-	xfree(buf);
+	pamsshagentauth_xfree(buf);
 }
