@@ -54,7 +54,7 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 	Buffer b;
 
 	if (key == NULL || key->type != KEY_DSA || key->dsa == NULL) {
-		logerror("ssh_dss_sign: no DSA key");
+		pamsshagentauth_logerror("ssh_dss_sign: no DSA key");
 		return -1;
 	}
 	EVP_DigestInit(&md, evp_md);
@@ -65,14 +65,14 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 	memset(digest, 'd', sizeof(digest));
 
 	if (sig == NULL) {
-		logerror("ssh_dss_sign: sign failed");
+		pamsshagentauth_logerror("ssh_dss_sign: sign failed");
 		return -1;
 	}
 
 	rlen = BN_num_bytes(sig->r);
 	slen = BN_num_bytes(sig->s);
 	if (rlen > INTBLOB_LEN || slen > INTBLOB_LEN) {
-		logerror("bad sig size %u %u", rlen, slen);
+		pamsshagentauth_logerror("bad sig size %u %u", rlen, slen);
 		DSA_SIG_free(sig);
 		return -1;
 	}
@@ -117,7 +117,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	Buffer b;
 
 	if (key == NULL || key->type != KEY_DSA || key->dsa == NULL) {
-		logerror("ssh_dss_verify: no DSA key");
+		pamsshagentauth_logerror("ssh_dss_verify: no DSA key");
 		return -1;
 	}
 
@@ -133,7 +133,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		buffer_append(&b, signature, signaturelen);
 		ktype = buffer_get_string(&b, NULL);
 		if (strcmp("ssh-dss", ktype) != 0) {
-			logerror("ssh_dss_verify: cannot handle type %s", ktype);
+			pamsshagentauth_logerror("ssh_dss_verify: cannot handle type %s", ktype);
 			buffer_free(&b);
 			xfree(ktype);
 			return -1;
@@ -143,7 +143,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		rlen = buffer_len(&b);
 		buffer_free(&b);
 		if (rlen != 0) {
-			logerror("ssh_dss_verify: "
+			pamsshagentauth_logerror("ssh_dss_verify: "
 			    "remaining bytes in signature %d", rlen);
 			xfree(sigblob);
 			return -1;
@@ -179,7 +179,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 
 	DSA_SIG_free(sig);
 
-	verbose("ssh_dss_verify: signature %s",
+	pamsshagentauth_verbose("ssh_dss_verify: signature %s",
 	    ret == 1 ? "correct" : ret == 0 ? "incorrect" : "error");
 	return ret;
 }

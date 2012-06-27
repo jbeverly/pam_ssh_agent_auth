@@ -171,7 +171,7 @@ int
 buffer_get_ret(Buffer *buffer, void *buf, u_int len)
 {
 	if (len > buffer->end - buffer->offset) {
-		logerror("buffer_get_ret: trying to get more bytes %d than in buffer %d",
+		pamsshagentauth_logerror("buffer_get_ret: trying to get more bytes %d than in buffer %d",
 		    len, buffer->end - buffer->offset);
 		return (-1);
 	}
@@ -193,7 +193,7 @@ int
 buffer_consume_ret(Buffer *buffer, u_int bytes)
 {
 	if (bytes > buffer->end - buffer->offset) {
-		logerror("buffer_consume_ret: trying to get more bytes than in buffer");
+		pamsshagentauth_logerror("buffer_consume_ret: trying to get more bytes than in buffer");
 		return (-1);
 	}
 	buffer->offset += bytes;

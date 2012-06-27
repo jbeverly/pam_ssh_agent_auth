@@ -63,11 +63,11 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 	Key *found;
 	char *fp;
 
-	verbose("trying public key file %s", file);
+	pamsshagentauth_verbose("trying public key file %s", file);
 
 	/* Fail not so quietly if file does not exist */
 	if (stat(file, &st) < 0) {
-        verbose("File not found: %s", file);
+        pamsshagentauth_verbose("File not found: %s", file);
 		return 0;
 	}
 	/* Open the file containing the authorized keys. */
@@ -78,7 +78,7 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 	if (
 	    secure_filename(f, file, pw, line, sizeof(line)) != 0) {
 		fclose(f);
-		logit("Authentication refused: %s", line);
+		pamsshagentauth_logit("Authentication refused: %s", line);
 		return 0;
 	}
 
@@ -97,7 +97,7 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 		if (key_read(found, &cp) != 1) {
 			/* no key?  check if there are options for this key */
 			int quoted = 0;
-			verbose("user_key_allowed: check options: '%s'", cp);
+			pamsshagentauth_verbose("user_key_allowed: check options: '%s'", cp);
 			key_options = cp;
 			for (; *cp && (quoted || (*cp != ' ' && *cp != '\t')); cp++) {
 				if (*cp == '\\' && cp[1] == '"')
@@ -109,17 +109,17 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 			for (; *cp == ' ' || *cp == '\t'; cp++)
 				;
 			if (key_read(found, &cp) != 1) {
-				verbose("user_key_allowed: advance: '%s'", cp);
+				pamsshagentauth_verbose("user_key_allowed: advance: '%s'", cp);
 				/* still no key?  advance to next line*/
 				continue;
 			}
 		}
 		if (key_equal(found, key)) {
 			found_key = 1;
-			logit("matching key found: file %s, line %lu",
+			pamsshagentauth_logit("matching key found: file %s, line %lu",
 			    file, linenum);
 			fp = key_fingerprint(found, SSH_FP_MD5, SSH_FP_HEX);
-			logit("Found matching %s key: %s",
+			pamsshagentauth_logit("Found matching %s key: %s",
 			    key_type(found), fp);
 			xfree(fp);
 			break;
@@ -128,6 +128,6 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 	fclose(f);
 	key_free(found);
 	if (!found_key)
-		verbose("key not found");
+		pamsshagentauth_verbose("key not found");
 	return found_key;
 }

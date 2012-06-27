@@ -168,14 +168,14 @@ buffer_get_string_ret(Buffer *buffer, u_int *length_ptr)
 	/* Get the length. */
 	len = buffer_get_int(buffer);
 	if (len > 256 * 1024) {
-		logerror("buffer_get_string_ret: bad string length %u", len);
+		pamsshagentauth_logerror("buffer_get_string_ret: bad string length %u", len);
 		return (NULL);
 	}
 	/* Allocate space for the string.  Add one byte for a null character. */
 	value = xmalloc(len + 1);
 	/* Get the string. */
 	if (buffer_get_ret(buffer, value, len) == -1) {
-		logerror("buffer_get_string_ret: buffer_get failed");
+		pamsshagentauth_logerror("buffer_get_string_ret: buffer_get failed");
 		xfree(value);
 		return (NULL);
 	}
@@ -221,7 +221,7 @@ int
 buffer_get_char_ret(char *ret, Buffer *buffer)
 {
 	if (buffer_get_ret(buffer, ret, 1) == -1) {
-		logerror("buffer_get_char_ret: buffer_get_ret failed");
+		pamsshagentauth_logerror("buffer_get_char_ret: buffer_get_ret failed");
 		return (-1);
 	}
 	return (0);

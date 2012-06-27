@@ -79,11 +79,11 @@ seed_rng(void)
 	mysig_t old_sigchld;
 
 	if (RAND_status() == 1) {
-		verbose("RNG is ready, skipping seeding");
+		pamsshagentauth_verbose("RNG is ready, skipping seeding");
 		return;
 	}
 
-	verbose("Seeding PRNG from %s", SSH_RAND_HELPER);
+	pamsshagentauth_verbose("Seeding PRNG from %s", SSH_RAND_HELPER);
 
 	if ((devnull = open("/dev/null", O_RDWR)) == -1)
 		fatal("Couldn't open /dev/null: %s", strerror(errno));
@@ -172,7 +172,7 @@ rexec_send_rng_seed(Buffer *m)
 	u_char buf[RANDOM_SEED_SIZE];
 
 	if (RAND_bytes(buf, sizeof(buf)) <= 0) {
-		logerror("Couldn't obtain random bytes (error %ld)",
+		pamsshagentauth_logerror("Couldn't obtain random bytes (error %ld)",
 		    ERR_get_error());
 		buffer_put_string(m, "", 0);
 	} else 
@@ -187,7 +187,7 @@ rexec_recv_rng_seed(Buffer *m)
 
 	buf = buffer_get_string_ret(m, &len);
 	if (buf != NULL) {
-		verbose("rexec_recv_rng_seed: seeding rng with %u bytes", len);
+		pamsshagentauth_verbose("rexec_recv_rng_seed: seeding rng with %u bytes", len);
 		RAND_add(buf, len, len);
 	}
 }

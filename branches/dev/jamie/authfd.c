@@ -126,7 +126,7 @@ ssh_get_authentication_socket(uid_t uid)
      * is attempting to race the stat above to bypass authentication.
      */
     if( (sock_st.st_mode & S_IWUSR) != S_IWUSR || (sock_st.st_mode & S_IRUSR) != S_IRUSR) {
-        logerror("ssh-agent socket has incorrect permissions for owner");
+        pamsshagentauth_logerror("ssh-agent socket has incorrect permissions for owner");
         return -1;
     }
 
@@ -173,7 +173,7 @@ ssh_request_reply(AuthenticationConnection *auth, Buffer *request, Buffer *reply
 	if (atomicio(vwrite, auth->fd, buf, 4) != 4 ||
 	    atomicio(vwrite, auth->fd, buffer_ptr(request),
 	    buffer_len(request)) != buffer_len(request)) {
-		logerror("Error writing to authentication socket.");
+		pamsshagentauth_logerror("Error writing to authentication socket.");
 		return 0;
 	}
 	/*
@@ -181,7 +181,7 @@ ssh_request_reply(AuthenticationConnection *auth, Buffer *request, Buffer *reply
 	 * response packet.
 	 */
 	if (atomicio(read, auth->fd, buf, 4) != 4) {
-	    logerror("Error reading response length from authentication socket.");
+	    pamsshagentauth_logerror("Error reading response length from authentication socket.");
 	    return 0;
 	}
 
@@ -197,7 +197,7 @@ ssh_request_reply(AuthenticationConnection *auth, Buffer *request, Buffer *reply
 		if (l > sizeof(buf))
 			l = sizeof(buf);
 		if (atomicio(read, auth->fd, buf, l) != l) {
-			logerror("Error reading response from authentication socket.");
+			pamsshagentauth_logerror("Error reading response from authentication socket.");
 			return 0;
 		}
 		buffer_append(reply, buf, l);
@@ -372,7 +372,7 @@ ssh_get_next_identity(AuthenticationConnection *auth, char **comment, int versio
 		*comment = buffer_get_string(&auth->identities, NULL);
 		keybits = BN_num_bits(key->rsa->n);
 		if (keybits < 0 || bits != (u_int)keybits)
-			logit("Warning: identity keysize mismatch: actual %d, announced %u",
+			pamsshagentauth_logit("Warning: identity keysize mismatch: actual %d, announced %u",
 			    BN_num_bits(key->rsa->n), bits);
 		break;
 	case 2:
@@ -412,7 +412,7 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 	if (key->type != KEY_RSA1)
 		return 0;
 	if (response_type == 0) {
-		logit("Compatibility with ssh protocol version 1.0 no longer supported.");
+		pamsshagentauth_logit("Compatibility with ssh protocol version 1.0 no longer supported.");
 		return 0;
 	}
 	buffer_init(&buffer);
@@ -431,7 +431,7 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 	type = buffer_get_char(&buffer);
 
 	if (agent_failed(type)) {
-		logit("Agent admitted failure to authenticate using the key.");
+		pamsshagentauth_logit("Agent admitted failure to authenticate using the key.");
 	} else if (type != SSH_AGENT_RSA_RESPONSE) {
 		fatal("Bad authentication response: %d", type);
 	} else {
@@ -480,7 +480,7 @@ ssh_agent_sign(AuthenticationConnection *auth,
 	}
 	type = buffer_get_char(&msg);
 	if (agent_failed(type)) {
-		logit("Agent admitted failure to sign using the key.");
+		pamsshagentauth_logit("Agent admitted failure to sign using the key.");
 	} else if (type != SSH2_AGENT_SIGN_RESPONSE) {
 		fatal("Bad authentication response: %d", type);
 	} else {
@@ -696,7 +696,7 @@ decode_reply(int type)
 	case SSH_AGENT_FAILURE:
 	case SSH_COM_AGENT2_FAILURE:
 	case SSH2_AGENT_FAILURE:
-		logit("SSH_AGENT_FAILURE");
+		pamsshagentauth_logit("SSH_AGENT_FAILURE");
 		return 0;
 	case SSH_AGENT_SUCCESS:
 		return 1;

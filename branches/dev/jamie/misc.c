@@ -80,17 +80,17 @@ set_nonblock(int fd)
 
 	val = fcntl(fd, F_GETFL, 0);
 	if (val < 0) {
-		logerror("fcntl(%d, F_GETFL, 0): %s", fd, strerror(errno));
+		pamsshagentauth_logerror("fcntl(%d, F_GETFL, 0): %s", fd, strerror(errno));
 		return (-1);
 	}
 	if (val & O_NONBLOCK) {
-		verbose("fd %d is O_NONBLOCK", fd);
+		pamsshagentauth_verbose("fd %d is O_NONBLOCK", fd);
 		return (0);
 	}
-	verbose("fd %d setting O_NONBLOCK", fd);
+	pamsshagentauth_verbose("fd %d setting O_NONBLOCK", fd);
 	val |= O_NONBLOCK;
 	if (fcntl(fd, F_SETFL, val) == -1) {
-		verbose("fcntl(%d, F_SETFL, O_NONBLOCK): %s", fd,
+		pamsshagentauth_verbose("fcntl(%d, F_SETFL, O_NONBLOCK): %s", fd,
 		    strerror(errno));
 		return (-1);
 	}
@@ -104,17 +104,17 @@ unset_nonblock(int fd)
 
 	val = fcntl(fd, F_GETFL, 0);
 	if (val < 0) {
-		logerror("fcntl(%d, F_GETFL, 0): %s", fd, strerror(errno));
+		pamsshagentauth_logerror("fcntl(%d, F_GETFL, 0): %s", fd, strerror(errno));
 		return (-1);
 	}
 	if (!(val & O_NONBLOCK)) {
-		verbose("fd %d is not O_NONBLOCK", fd);
+		pamsshagentauth_verbose("fd %d is not O_NONBLOCK", fd);
 		return (0);
 	}
-	verbose("fd %d clearing O_NONBLOCK", fd);
+	pamsshagentauth_verbose("fd %d clearing O_NONBLOCK", fd);
 	val &= ~O_NONBLOCK;
 	if (fcntl(fd, F_SETFL, val) == -1) {
-		verbose("fcntl(%d, F_SETFL, ~O_NONBLOCK): %s",
+		pamsshagentauth_verbose("fcntl(%d, F_SETFL, ~O_NONBLOCK): %s",
 		    fd, strerror(errno));
 		return (-1);
 	}
@@ -138,17 +138,17 @@ set_nodelay(int fd)
 
 	optlen = sizeof opt;
 	if (getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, &optlen) == -1) {
-		verbose("getsockopt TCP_NODELAY: %.100s", strerror(errno));
+		pamsshagentauth_verbose("getsockopt TCP_NODELAY: %.100s", strerror(errno));
 		return;
 	}
 	if (opt == 1) {
-		verbose("fd %d is TCP_NODELAY", fd);
+		pamsshagentauth_verbose("fd %d is TCP_NODELAY", fd);
 		return;
 	}
 	opt = 1;
-	verbose("fd %d setting TCP_NODELAY", fd);
+	pamsshagentauth_verbose("fd %d setting TCP_NODELAY", fd);
 	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof opt) == -1)
-		logerror("setsockopt TCP_NODELAY: %.100s", strerror(errno));
+		pamsshagentauth_logerror("setsockopt TCP_NODELAY: %.100s", strerror(errno));
 }
 
 /* Characters considered whitespace in strsep calls. */
@@ -367,7 +367,7 @@ put_host_port(const char *host, u_short port)
 		return(xstrdup(host));
 	if (asprintf(&hoststr, "[%s]:%d", host, (int)port) < 0)
 		fatal("put_host_port: asprintf: %s", strerror(errno));
-	verbose("put_host_port: %s", hoststr);
+	pamsshagentauth_verbose("put_host_port: %s", hoststr);
 	return hoststr;
 }
 
@@ -631,7 +631,7 @@ read_keyfile_line(FILE *f, const char *filename, char *buf, size_t bufsz,
 		if (buf[strlen(buf) - 1] == '\n' || feof(f)) {
 			return 0;
 		} else {
-			verbose("%s: %s line %lu exceeds size limit", __func__,
+			pamsshagentauth_verbose("%s: %s line %lu exceeds size limit", __func__,
 			    filename, *lineno);
 			/* discard remainder of line */
 			while (fgetc(f) != '\n' && !feof(f))
@@ -662,16 +662,16 @@ tun_open(int tun, int mode)
 				break;
 		}
 	} else {
-		verbose("%s: invalid tunnel %u", __func__, tun);
+		pamsshagentauth_verbose("%s: invalid tunnel %u", __func__, tun);
 		return (-1);
 	}
 
 	if (fd < 0) {
-		verbose("%s: %s open failed: %s", __func__, name, strerror(errno));
+		pamsshagentauth_verbose("%s: %s open failed: %s", __func__, name, strerror(errno));
 		return (-1);
 	}
 
-	verbose("%s: %s mode %d fd %d", __func__, name, mode, fd);
+	pamsshagentauth_verbose("%s: %s mode %d fd %d", __func__, name, mode, fd);
 
 	/* Set the tunnel device operation mode */
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "tun%d", tun);
@@ -703,11 +703,11 @@ tun_open(int tun, int mode)
 		close(fd);
 	if (sock >= 0)
 		close(sock);
-	verbose("%s: failed to set %s mode %d: %s", __func__, name,
+	pamsshagentauth_verbose("%s: failed to set %s mode %d: %s", __func__, name,
 	    mode, strerror(errno));
 	return (-1);
 #else
-	logerror("Tunnel interfaces are not supported on this platform");
+	pamsshagentauth_logerror("Tunnel interfaces are not supported on this platform");
 	return (-1);
 #endif
 }

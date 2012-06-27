@@ -103,7 +103,7 @@ static struct {
 };
 
 SyslogFacility
-log_facility_number(char *name)
+pamsshagentauth_log_facility_number(char *name)
 {
 	int i;
 
@@ -128,12 +128,12 @@ log_level_number(char *name)
 
 /* Error messages that should be logged. */
 void
-logerror(const char *fmt,...)
+pamsshagentauth_logerror(const char *fmt,...)
 {
 	va_list args;
 
 	va_start(args, fmt);
-	do_log(SYSLOG_LEVEL_ERROR, fmt, args);
+	pamsshagentauth_do_log(SYSLOG_LEVEL_ERROR, fmt, args);
 	va_end(args);
 }
 
@@ -144,7 +144,7 @@ sigdie(const char *fmt,...)
 	va_list args;
 
 	va_start(args, fmt);
-	do_log(SYSLOG_LEVEL_FATAL, fmt, args);
+	pamsshagentauth_do_log(SYSLOG_LEVEL_FATAL, fmt, args);
 	va_end(args);
 #endif
 	_exit(1);
@@ -154,56 +154,56 @@ sigdie(const char *fmt,...)
 /* Log this message (information that usually should go to the log). */
 
 void
-logit(const char *fmt,...)
+pamsshagentauth_logit(const char *fmt,...)
 {
 	va_list args;
 
 	va_start(args, fmt);
-	do_log(SYSLOG_LEVEL_INFO, fmt, args);
+	pamsshagentauth_do_log(SYSLOG_LEVEL_INFO, fmt, args);
 	va_end(args);
 }
 
 /* More detailed messages (information that does not need to go to the log). */
 
 void
-verbose(const char *fmt,...)
+pamsshagentauth_verbose(const char *fmt,...)
 {
 	va_list args;
 
 	va_start(args, fmt);
-	do_log(SYSLOG_LEVEL_VERBOSE, fmt, args);
+	pamsshagentauth_do_log(SYSLOG_LEVEL_VERBOSE, fmt, args);
 	va_end(args);
 }
 
 /* Debugging messages that should not be logged during normal operation. */
 
 void
-debug(const char *fmt,...)
+pamsshagentauth_debug(const char *fmt,...)
 {
 	va_list args;
 
 	va_start(args, fmt);
-	do_log(SYSLOG_LEVEL_DEBUG1, fmt, args);
+	pamsshagentauth_do_log(SYSLOG_LEVEL_DEBUG1, fmt, args);
 	va_end(args);
 }
 
 void
-debug2(const char *fmt,...)
+pamsshagentauth_debug2(const char *fmt,...)
 {
 	va_list args;
 
 	va_start(args, fmt);
-	do_log(SYSLOG_LEVEL_DEBUG2, fmt, args);
+	pamsshagentauth_do_log(SYSLOG_LEVEL_DEBUG2, fmt, args);
 	va_end(args);
 }
 
 void
-debug3(const char *fmt,...)
+pamsshagentauth_debug3(const char *fmt,...)
 {
 	va_list args;
 
 	va_start(args, fmt);
-	do_log(SYSLOG_LEVEL_DEBUG3, fmt, args);
+	pamsshagentauth_do_log(SYSLOG_LEVEL_DEBUG3, fmt, args);
 	va_end(args);
 }
 
@@ -212,7 +212,7 @@ debug3(const char *fmt,...)
  */
 
 void
-log_init(char *av0, LogLevel level, SyslogFacility facility, int on_stderr)
+pamsshagentauth_log_init(char *av0, LogLevel level, SyslogFacility facility, int on_stderr)
 {
 #if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT)
 	struct syslog_data sdata = SYSLOG_DATA_INIT;
@@ -304,7 +304,7 @@ log_init(char *av0, LogLevel level, SyslogFacility facility, int on_stderr)
 #define MSGBUFSIZ 1024
 
 void
-do_log(LogLevel level, const char *fmt, va_list args)
+pamsshagentauth_do_log(LogLevel level, const char *fmt, va_list args)
 {
 #if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT)
 	struct syslog_data sdata = SYSLOG_DATA_INIT;
