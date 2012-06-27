@@ -71,12 +71,12 @@ int rresvport_af(int *alport, sa_family_t af);
 
 #ifndef HAVE_STRLCPY
 /* #include <sys/types.h> XXX Still needed? */
-size_t strlcpy(char *dst, const char *src, size_t siz);
+size_t pamsshagentauth_strlcpy(char *dst, const char *src, size_t siz);
 #endif
 
 #ifndef HAVE_STRLCAT
 /* #include <sys/types.h> XXX Still needed? */
-size_t strlcat(char *dst, const char *src, size_t siz);
+size_t pamsshagentauth_strlcat(char *dst, const char *src, size_t siz);
 #endif 
 
 #ifndef HAVE_SETENV
@@ -147,8 +147,8 @@ int getpeereid(int , uid_t *, gid_t *);
 #endif 
 
 #ifndef HAVE_ARC4RANDOM
-unsigned int arc4random(void);
-void arc4random_stir(void);
+unsigned int pamsshagentauth_arc4random(void);
+void pamsshagentauth_arc4random_stir(void);
 #endif /* !HAVE_ARC4RANDOM */
 
 #ifndef HAVE_ASPRINTF
@@ -171,7 +171,7 @@ long long strtoll(const char *, char **, int);
 #endif
 
 #ifndef HAVE_STRTONUM
-long long strtonum(const char *, long long, long long, const char **);
+long long pamsshagentauth_strtonum(const char *, long long, long long, const char **);
 #endif
 
 #if !defined(HAVE_VASPRINTF) || !defined(HAVE_VSNPRINTF)

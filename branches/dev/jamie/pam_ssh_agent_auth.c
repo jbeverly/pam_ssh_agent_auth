@@ -100,7 +100,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
  * a patch 8-)
  */
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
-    __progname = xstrdup(servicename);
+    __progname = pamsshagentauth_xstrdup(servicename);
 #endif
 
     for(i = argc, argv_ptr = (char **) argv; i > 0; ++argv_ptr, i--) {
@@ -168,7 +168,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         parse_authorized_key_file(user, authorized_keys_file_input);
     } else {
         pamsshagentauth_verbose("Using default file=/etc/security/authorized_keys");
-        authorized_keys_file = xstrdup("/etc/security/authorized_keys");
+        authorized_keys_file = pamsshagentauth_xstrdup("/etc/security/authorized_keys");
     }
 
     /* 
@@ -182,7 +182,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         /* 
          * this pw_uid is used to validate the SSH_AUTH_SOCK, and so must be the uid of the ruser invoking the program, not the target-user
          */
-        if(find_authorized_keys(getpwnam(ruser)->pw_uid)) {
+        if(pamsshagentauth_find_authorized_keys(getpwnam(ruser)->pw_uid)) {
             pamsshagentauth_logit("Authenticated: `%s' as `%s' using %s", ruser, user, authorized_keys_file);
             retval = PAM_SUCCESS;
         } else {

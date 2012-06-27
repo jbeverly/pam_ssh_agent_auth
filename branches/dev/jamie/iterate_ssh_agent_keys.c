@@ -47,20 +47,20 @@ u_char * session_id2 = NULL;
 uint8_t session_id_len = 0;
 
 u_char *
-session_id2_gen()
+pamsshagentauth_session_id2_gen()
 {
     char *cookie = NULL;
     uint8_t i = 0;
     uint32_t rnd = 0;
 
-    rnd = arc4random();
+    rnd = pamsshagentauth_arc4random();
     session_id_len = (uint8_t) rnd;
 
     cookie = calloc(1,session_id_len);
 
     for (i = 0; i < session_id_len; i++) {
         if (i % 4 == 0) {
-            rnd = arc4random();
+            rnd = pamsshagentauth_arc4random();
         }
         cookie[i] = (char) rnd;
         rnd >>= 8;
@@ -70,7 +70,7 @@ session_id2_gen()
 }
 
 int
-find_authorized_keys(uid_t uid)
+pamsshagentauth_find_authorized_keys(uid_t uid)
 {
     Identity *id;
     Key *key;
@@ -79,23 +79,23 @@ find_authorized_keys(uid_t uid)
     uint8_t retval = 0;
 
     OpenSSL_add_all_digests();
-    session_id2 = session_id2_gen();
+    session_id2 = pamsshagentauth_session_id2_gen();
 
     if ((ac = ssh_get_authentication_connection(uid))) {
         pamsshagentauth_verbose("Contacted ssh-agent of user %s (%u)", getpwuid(uid)->pw_name, uid);
         for (key = ssh_get_first_identity(ac, &comment, 2); key != NULL; key = ssh_get_next_identity(ac, &comment, 2)) 
         {
             if(key != NULL) {
-                id = xcalloc(1, sizeof(*id));
+                id = pamsshagentauth_xcalloc(1, sizeof(*id));
                 id->key = key;
                 id->filename = comment;
                 id->ac = ac;
                 if(userauth_pubkey_from_id(id)) {
                     retval = 1;
                 }
-                xfree(id->filename);
-                key_free(id->key);
-                xfree(id);
+                pamsshagentauth_xfree(id->filename);
+                pamsshagentauth_key_free(id->key);
+                pamsshagentauth_xfree(id);
                 if(retval == 1)
                     break;
             }
@@ -105,7 +105,7 @@ find_authorized_keys(uid_t uid)
     else {
         pamsshagentauth_verbose("No ssh-agent could be contacted");
     }
-    xfree(session_id2);
+    pamsshagentauth_xfree(session_id2);
     EVP_cleanup();
     return retval;
 }

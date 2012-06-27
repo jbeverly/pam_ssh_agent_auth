@@ -33,7 +33,7 @@
 # define LLONG_MIN LONG_LONG_MIN
 #endif
 
-long long strtonum(const char *, long long, long long, const char **);
+long long pamsshagentauth_strtonum(const char *, long long, long long, const char **);
 
 int fail;
 
@@ -43,7 +43,7 @@ test(const char *p, long long lb, long long ub, int ok)
 	long long val;
 	const char *q;
 
-	val = strtonum(p, lb, ub, &q);
+	val = pamsshagentauth_strtonum(p, lb, ub, &q);
 	if (ok && q != NULL) {
 		fprintf(stderr, "%s [%lld-%lld] ", p, lb, ub);
 		fprintf(stderr, "NUMBER NOT ACCEPTED %s\n", q);

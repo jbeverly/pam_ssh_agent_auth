@@ -45,7 +45,7 @@ char *ssh_get_progname(char *argv0)
 #ifdef HAVE___PROGNAME
 	extern char *__progname;
 
-	return xstrdup(__progname);
+	return pamsshagentauth_xstrdup(__progname);
 #else
 	char *p;
 
@@ -57,7 +57,7 @@ char *ssh_get_progname(char *argv0)
 	else
 		p++;
 
-	return (xstrdup(p));
+	return (pamsshagentauth_xstrdup(p));
 #endif
 }
 

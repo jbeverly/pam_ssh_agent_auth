@@ -56,67 +56,67 @@
  */
 
 int
-buffer_get_short_ret(u_short *ret, Buffer *buffer)
+pamsshagentauth_buffer_get_short_ret(u_short *ret, Buffer *buffer)
 {
 	u_char buf[2];
 
-	if (buffer_get_ret(buffer, (char *) buf, 2) == -1)
+	if (pamsshagentauth_buffer_get_ret(buffer, (char *) buf, 2) == -1)
 		return (-1);
-	*ret = get_u16(buf);
+	*ret = pamsshagentauth_get_u16(buf);
 	return (0);
 }
 
 u_short
-buffer_get_short(Buffer *buffer)
+pamsshagentauth_buffer_get_short(Buffer *buffer)
 {
 	u_short ret;
 
-	if (buffer_get_short_ret(&ret, buffer) == -1)
-		fatal("buffer_get_short: buffer error");
+	if (pamsshagentauth_buffer_get_short_ret(&ret, buffer) == -1)
+		pamsshagentauth_fatal("buffer_get_short: buffer error");
 
 	return (ret);
 }
 
 int
-buffer_get_int_ret(u_int *ret, Buffer *buffer)
+pamsshagentauth_buffer_get_int_ret(u_int *ret, Buffer *buffer)
 {
 	u_char buf[4];
 
-	if (buffer_get_ret(buffer, (char *) buf, 4) == -1)
+	if (pamsshagentauth_buffer_get_ret(buffer, (char *) buf, 4) == -1)
 		return (-1);
-	*ret = get_u32(buf);
+	*ret = pamsshagentauth_get_u32(buf);
 	return (0);
 }
 
 u_int
-buffer_get_int(Buffer *buffer)
+pamsshagentauth_buffer_get_int(Buffer *buffer)
 {
 	u_int ret;
 
-	if (buffer_get_int_ret(&ret, buffer) == -1)
-		fatal("buffer_get_int: buffer error");
+	if (pamsshagentauth_buffer_get_int_ret(&ret, buffer) == -1)
+		pamsshagentauth_fatal("buffer_get_int: buffer error");
 
 	return (ret);
 }
 
 int
-buffer_get_int64_ret(u_int64_t *ret, Buffer *buffer)
+pamsshagentauth_buffer_get_int64_ret(u_int64_t *ret, Buffer *buffer)
 {
 	u_char buf[8];
 
-	if (buffer_get_ret(buffer, (char *) buf, 8) == -1)
+	if (pamsshagentauth_buffer_get_ret(buffer, (char *) buf, 8) == -1)
 		return (-1);
-	*ret = get_u64(buf);
+	*ret = pamsshagentauth_get_u64(buf);
 	return (0);
 }
 
 u_int64_t
-buffer_get_int64(Buffer *buffer)
+pamsshagentauth_buffer_get_int64(Buffer *buffer)
 {
 	u_int64_t ret;
 
-	if (buffer_get_int64_ret(&ret, buffer) == -1)
-		fatal("buffer_get_int: buffer error");
+	if (pamsshagentauth_buffer_get_int64_ret(&ret, buffer) == -1)
+		pamsshagentauth_fatal("buffer_get_int: buffer error");
 
 	return (ret);
 }
@@ -125,30 +125,30 @@ buffer_get_int64(Buffer *buffer)
  * Stores integers in the buffer, msb first.
  */
 void
-buffer_put_short(Buffer *buffer, u_short value)
+pamsshagentauth_buffer_put_short(Buffer *buffer, u_short value)
 {
 	char buf[2];
 
-	put_u16(buf, value);
-	buffer_append(buffer, buf, 2);
+	pamsshagentauth_put_u16(buf, value);
+	pamsshagentauth_buffer_append(buffer, buf, 2);
 }
 
 void
-buffer_put_int(Buffer *buffer, u_int value)
+pamsshagentauth_buffer_put_int(Buffer *buffer, u_int value)
 {
 	char buf[4];
 
-	put_u32(buf, value);
-	buffer_append(buffer, buf, 4);
+	pamsshagentauth_put_u32(buf, value);
+	pamsshagentauth_buffer_append(buffer, buf, 4);
 }
 
 void
-buffer_put_int64(Buffer *buffer, u_int64_t value)
+pamsshagentauth_buffer_put_int64(Buffer *buffer, u_int64_t value)
 {
 	char buf[8];
 
-	put_u64(buf, value);
-	buffer_append(buffer, buf, 8);
+	pamsshagentauth_put_u64(buf, value);
+	pamsshagentauth_buffer_append(buffer, buf, 8);
 }
 
 /*
@@ -160,23 +160,23 @@ buffer_put_int64(Buffer *buffer, u_int64_t value)
  * to the returned string, and is not counted in length.
  */
 void *
-buffer_get_string_ret(Buffer *buffer, u_int *length_ptr)
+pamsshagentauth_buffer_get_string_ret(Buffer *buffer, u_int *length_ptr)
 {
 	u_char *value;
 	u_int len;
 
 	/* Get the length. */
-	len = buffer_get_int(buffer);
+	len = pamsshagentauth_buffer_get_int(buffer);
 	if (len > 256 * 1024) {
 		pamsshagentauth_logerror("buffer_get_string_ret: bad string length %u", len);
 		return (NULL);
 	}
 	/* Allocate space for the string.  Add one byte for a null character. */
-	value = xmalloc(len + 1);
+	value = pamsshagentauth_xmalloc(len + 1);
 	/* Get the string. */
-	if (buffer_get_ret(buffer, value, len) == -1) {
+	if (pamsshagentauth_buffer_get_ret(buffer, value, len) == -1) {
 		pamsshagentauth_logerror("buffer_get_string_ret: buffer_get failed");
-		xfree(value);
+		pamsshagentauth_xfree(value);
 		return (NULL);
 	}
 	/* Append a null character to make processing easier. */
@@ -188,12 +188,12 @@ buffer_get_string_ret(Buffer *buffer, u_int *length_ptr)
 }
 
 void *
-buffer_get_string(Buffer *buffer, u_int *length_ptr)
+pamsshagentauth_buffer_get_string(Buffer *buffer, u_int *length_ptr)
 {
 	void *ret;
 
-	if ((ret = buffer_get_string_ret(buffer, length_ptr)) == NULL)
-		fatal("buffer_get_string: buffer error");
+	if ((ret = pamsshagentauth_buffer_get_string_ret(buffer, length_ptr)) == NULL)
+		pamsshagentauth_fatal("buffer_get_string: buffer error");
 	return (ret);
 }
 
@@ -201,26 +201,26 @@ buffer_get_string(Buffer *buffer, u_int *length_ptr)
  * Stores and arbitrary binary string in the buffer.
  */
 void
-buffer_put_string(Buffer *buffer, const void *buf, u_int len)
+pamsshagentauth_buffer_put_string(Buffer *buffer, const void *buf, u_int len)
 {
-	buffer_put_int(buffer, len);
-	buffer_append(buffer, buf, len);
+	pamsshagentauth_buffer_put_int(buffer, len);
+	pamsshagentauth_buffer_append(buffer, buf, len);
 }
 void
-buffer_put_cstring(Buffer *buffer, const char *s)
+pamsshagentauth_buffer_put_cstring(Buffer *buffer, const char *s)
 {
 	if (s == NULL)
-		fatal("buffer_put_cstring: s == NULL");
-	buffer_put_string(buffer, s, strlen(s));
+		pamsshagentauth_fatal("buffer_put_cstring: s == NULL");
+	pamsshagentauth_buffer_put_string(buffer, s, strlen(s));
 }
 
 /*
  * Returns a character from the buffer (0 - 255).
  */
 int
-buffer_get_char_ret(char *ret, Buffer *buffer)
+pamsshagentauth_buffer_get_char_ret(char *ret, Buffer *buffer)
 {
-	if (buffer_get_ret(buffer, ret, 1) == -1) {
+	if (pamsshagentauth_buffer_get_ret(buffer, ret, 1) == -1) {
 		pamsshagentauth_logerror("buffer_get_char_ret: buffer_get_ret failed");
 		return (-1);
 	}
@@ -228,12 +228,12 @@ buffer_get_char_ret(char *ret, Buffer *buffer)
 }
 
 int
-buffer_get_char(Buffer *buffer)
+pamsshagentauth_buffer_get_char(Buffer *buffer)
 {
 	char ch;
 
-	if (buffer_get_char_ret(&ch, buffer) == -1)
-		fatal("buffer_get_char: buffer error");
+	if (pamsshagentauth_buffer_get_char_ret(&ch, buffer) == -1)
+		pamsshagentauth_fatal("buffer_get_char: buffer error");
 	return (u_char) ch;
 }
 
@@ -241,9 +241,9 @@ buffer_get_char(Buffer *buffer)
  * Stores a character in the buffer.
  */
 void
-buffer_put_char(Buffer *buffer, int value)
+pamsshagentauth_buffer_put_char(Buffer *buffer, int value)
 {
 	char ch = value;
 
-	buffer_append(buffer, &ch, 1);
+	pamsshagentauth_buffer_append(buffer, &ch, 1);
 }

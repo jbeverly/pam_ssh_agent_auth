@@ -66,14 +66,14 @@ realpath(const char *path, char resolved[PATH_MAX])
 		if (path[1] == '\0')
 			return (resolved);
 		resolved_len = 1;
-		left_len = strlcpy(left, path + 1, sizeof(left));
+		left_len = pamsshagentauth_strlcpy(left, path + 1, sizeof(left));
 	} else {
 		if (getcwd(resolved, PATH_MAX) == NULL) {
-			strlcpy(resolved, ".", PATH_MAX);
+			pamsshagentauth_strlcpy(resolved, ".", PATH_MAX);
 			return (NULL);
 		}
 		resolved_len = strlen(resolved);
-		left_len = strlcpy(left, path, sizeof(left));
+		left_len = pamsshagentauth_strlcpy(left, path, sizeof(left));
 	}
 	if (left_len >= sizeof(left) || resolved_len >= PATH_MAX) {
 		errno = ENAMETOOLONG;
@@ -130,7 +130,7 @@ realpath(const char *path, char resolved[PATH_MAX])
 		 * lstat() fails we still can return successfully if
 		 * there are no more path components left.
 		 */
-		resolved_len = strlcat(resolved, next_token, PATH_MAX);
+		resolved_len = pamsshagentauth_strlcat(resolved, next_token, PATH_MAX);
 		if (resolved_len >= PATH_MAX) {
 			errno = ENAMETOOLONG;
 			return (NULL);
@@ -176,13 +176,13 @@ realpath(const char *path, char resolved[PATH_MAX])
 					symlink[slen] = '/';
 					symlink[slen + 1] = 0;
 				}
-				left_len = strlcat(symlink, left, sizeof(left));
+				left_len = pamsshagentauth_strlcat(symlink, left, sizeof(left));
 				if (left_len >= sizeof(left)) {
 					errno = ENAMETOOLONG;
 					return (NULL);
 				}
 			}
-			left_len = strlcpy(left, symlink, sizeof(left));
+			left_len = pamsshagentauth_strlcpy(left, symlink, sizeof(left));
 		}
 	}
 

@@ -137,12 +137,12 @@ get_iaf_password(struct passwd *pw)
 	if (!ia_openinfo(pw->pw_name,&uinfo)) {
 		ia_get_logpwd(uinfo, &pw_password);
 		if (pw_password == NULL)
-			fatal("ia_get_logpwd: Unable to get the shadow passwd");
+			pamsshagentauth_fatal("ia_get_logpwd: Unable to get the shadow passwd");
 		ia_closeinfo(uinfo);
 	 	return pw_password;
 	}
 	else
-		fatal("ia_openinfo: Unable to open the shadow passwd file");
+		pamsshagentauth_fatal("ia_openinfo: Unable to open the shadow passwd file");
 }
 #endif /* USE_LIBIAF */
 #endif /* HAVE_LIBIAF */

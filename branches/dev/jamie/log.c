@@ -115,7 +115,7 @@ pamsshagentauth_log_facility_number(char *name)
 }
 
 LogLevel
-log_level_number(char *name)
+pamsshagentauth_log_level_number(char *name)
 {
 	int i;
 
@@ -138,7 +138,7 @@ pamsshagentauth_logerror(const char *fmt,...)
 }
 
 void
-sigdie(const char *fmt,...)
+pamsshagentauth_sigdie(const char *fmt,...)
 {
 #ifdef DO_LOG_SAFE_IN_SIGHAND
 	va_list args;
@@ -361,7 +361,7 @@ pamsshagentauth_do_log(LogLevel level, const char *fmt, va_list args)
 		vsnprintf(msgbuf, sizeof(msgbuf), fmtbuf, args);
 	}
 
-	strnvis(fmtbuf, msgbuf, sizeof(fmtbuf),
+	pamsshagentauth_strnvis(fmtbuf, msgbuf, sizeof(fmtbuf),
 	    log_on_stderr ? LOG_STDERR_VIS : LOG_SYSLOG_VIS);
 
     if(level == SYSLOG_LEVEL_FATAL) {

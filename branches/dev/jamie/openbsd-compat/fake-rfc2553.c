@@ -53,13 +53,13 @@ int getnameinfo(const struct sockaddr *sa, size_t salen, char *host,
 
 	if (serv != NULL) {
 		snprintf(tmpserv, sizeof(tmpserv), "%d", ntohs(sin->sin_port));
-		if (strlcpy(serv, tmpserv, servlen) >= servlen)
+		if (pamsshagentauth_strlcpy(serv, tmpserv, servlen) >= servlen)
 			return (EAI_MEMORY);
 	}
 
 	if (host != NULL) {
 		if (flags & NI_NUMERICHOST) {
-			if (strlcpy(host, inet_ntoa(sin->sin_addr),
+			if (pamsshagentauth_strlcpy(host, inet_ntoa(sin->sin_addr),
 			    hostlen) >= hostlen)
 				return (EAI_MEMORY);
 			else
@@ -70,7 +70,7 @@ int getnameinfo(const struct sockaddr *sa, size_t salen, char *host,
 			if (hp == NULL)
 				return (EAI_NODATA);
 			
-			if (strlcpy(host, hp->h_name, hostlen) >= hostlen)
+			if (pamsshagentauth_strlcpy(host, hp->h_name, hostlen) >= hostlen)
 				return (EAI_MEMORY);
 			else
 				return (0);

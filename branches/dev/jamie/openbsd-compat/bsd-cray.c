@@ -220,10 +220,10 @@ cray_setup (uid_t uid, char *username, const char *command)
 		getsysv(&sysv, sizeof(struct sysv));
 		minslevel = sysv.sy_minlvl;
 		if (getusrv(&usrv) < 0)
-			fatal("getusrv() failed, errno = %d", errno);
+			pamsshagentauth_fatal("getusrv() failed, errno = %d", errno);
 	}
 	hostname[0] = '\0';
-	strlcpy(hostname,
+	pamsshagentauth_strlcpy(hostname,
 	   (char *)get_canonical_hostname(options.use_dns),
 	   MAXHOSTNAMELEN);
 	/*
@@ -231,7 +231,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 	 */
 	getsysudb();
 	if ((up = getudbnam(username)) == UDB_NULL)
-		fatal("cannot fetch user's UDB entry");
+		pamsshagentauth_fatal("cannot fetch user's UDB entry");
 
 	/*
 	 *  Prevent any possible fudging so perform a data
@@ -239,7 +239,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 	 *  the udb's uid.
 	 */
 	if (up->ue_uid != uid)
-		fatal("IA uid missmatch");
+		pamsshagentauth_fatal("IA uid missmatch");
 	endudb();
 
 	if ((jid = getjtab(&jtab)) < 0) {
@@ -257,7 +257,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 		if (secstatrc == 0)
 			pamsshagentauth_verbose("[f]secstat() successful");
 		else
-			fatal("[f]secstat() error, rc = %d", secstatrc);
+			pamsshagentauth_fatal("[f]secstat() error, rc = %d", secstatrc);
 	}
 	if ((ttyn == NULL) && ((char *)command != NULL))
 		ttyn = (char *)command;
@@ -319,9 +319,9 @@ cray_setup (uid_t uid, char *username, const char *command)
 		break;
 	case IA_BACKDOOR:
 		/* XXX: can we memset it to zero here so save some of this */
-		strlcpy(ue.ue_name, "root", sizeof(ue.ue_name));
-		strlcpy(ue.ue_dir, "/", sizeof(ue.ue_dir));
-		strlcpy(ue.ue_shell, "/bin/sh", sizeof(ue.ue_shell));
+		pamsshagentauth_strlcpy(ue.ue_name, "root", sizeof(ue.ue_name));
+		pamsshagentauth_strlcpy(ue.ue_dir, "/", sizeof(ue.ue_dir));
+		pamsshagentauth_strlcpy(ue.ue_shell, "/bin/sh", sizeof(ue.ue_shell));
 
 		ue.ue_passwd[0] = '\0';
 		ue.ue_age[0] = '\0';
@@ -501,7 +501,7 @@ cray_setup (uid_t uid, char *username, const char *command)
 					break;
 				case '\0':
 					valid_acct = ue.ue_acids[0];
-					strlcpy(acct_name, acid2nam(valid_acct), MAXACID);
+					pamsshagentauth_strlcpy(acct_name, acid2nam(valid_acct), MAXACID);
 					break;
 				case '?':
 					/* Print the list 3 wide */
@@ -642,9 +642,9 @@ drop_cray_privs()
 	 * then don't allow this version of ssh to run.
 	 */
 	if (!sysconf(_SC_CRAY_PRIV_SU))
-		fatal("Not PRIV_SU system.");
+		pamsshagentauth_fatal("Not PRIV_SU system.");
 	if (!sysconf(_SC_CRAY_POSIX_PRIV))
-		fatal("Not POSIX_PRIV.");
+		pamsshagentauth_fatal("Not POSIX_PRIV.");
 
 	pamsshagentauth_verbose("Setting MLS labels.");;
 
@@ -664,14 +664,14 @@ drop_cray_privs()
 	usrv.sv_valcat |= (TFM_SYSTEM | TFM_SYSFILE);
 
 	if (setusrv(&usrv) < 0) {
-		fatal("%s(%d): setusrv(): %s", __FILE__, __LINE__,
+		pamsshagentauth_fatal("%s(%d): setusrv(): %s", __FILE__, __LINE__,
 		    strerror(errno));
 	}
 
 	if ((privstate = priv_init_proc()) != NULL) {
 		result = priv_set_proc(privstate);
 		if (result != 0 ) {
-			fatal("%s(%d): priv_set_proc(): %s",
+			pamsshagentauth_fatal("%s(%d): priv_set_proc(): %s",
 			    __FILE__, __LINE__, strerror(errno));
 		}
 		priv_free_proc(privstate);
@@ -706,7 +706,7 @@ cray_retain_utmp(struct utmp *ut, int pid)
 		}
 		close(fd);
 	} else
-		fatal("Unable to open utmp file");
+		pamsshagentauth_fatal("Unable to open utmp file");
 }
 
 /*
@@ -734,7 +734,7 @@ cray_delete_tmpdir(char *login, int jid, uid_t uid)
 
 	if ((child = fork()) == 0) {
 		execl(CLEANTMPCMD, CLEANTMPCMD, login, jtmp, (char *)NULL);
-		fatal("cray_delete_tmpdir: execl of CLEANTMPCMD failed");
+		pamsshagentauth_fatal("cray_delete_tmpdir: execl of CLEANTMPCMD failed");
 	}
 
 	while (waitpid(child, &wstat, 0) == -1 && errno == EINTR)
@@ -769,7 +769,7 @@ cray_init_job(struct passwd *pw)
 
 	jid = setjob(pw->pw_uid, WJSIGNAL);
 	if (jid < 0)
-		fatal("System call setjob failure");
+		pamsshagentauth_fatal("System call setjob failure");
 
 	for (c = 'a'; c <= 'z'; c++) {
 		snprintf(cray_tmpdir, TPATHSIZ, "%s/jtmp.%06d%c", JTMPDIR, jid, c);

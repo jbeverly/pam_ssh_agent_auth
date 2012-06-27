@@ -76,14 +76,14 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 		return 0;
 	}
 	if (
-	    secure_filename(f, file, pw, line, sizeof(line)) != 0) {
+	    pamsshagentauth_secure_filename(f, file, pw, line, sizeof(line)) != 0) {
 		fclose(f);
 		pamsshagentauth_logit("Authentication refused: %s", line);
 		return 0;
 	}
 
 	found_key = 0;
-	found = key_new(key->type);
+	found = pamsshagentauth_key_new(key->type);
 
 	while (read_keyfile_line(f, file, line, sizeof(line), &linenum) != -1) {
 		char *cp, *key_options = NULL;
@@ -94,7 +94,7 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 		if (!*cp || *cp == '\n' || *cp == '#')
 			continue;
 
-		if (key_read(found, &cp) != 1) {
+		if (pamsshagentauth_key_read(found, &cp) != 1) {
 			/* no key?  check if there are options for this key */
 			int quoted = 0;
 			pamsshagentauth_verbose("user_key_allowed: check options: '%s'", cp);
@@ -108,25 +108,25 @@ pam_user_key_allowed2(struct passwd *pw, Key *key, char *file)
 			/* Skip remaining whitespace. */
 			for (; *cp == ' ' || *cp == '\t'; cp++)
 				;
-			if (key_read(found, &cp) != 1) {
+			if (pamsshagentauth_key_read(found, &cp) != 1) {
 				pamsshagentauth_verbose("user_key_allowed: advance: '%s'", cp);
 				/* still no key?  advance to next line*/
 				continue;
 			}
 		}
-		if (key_equal(found, key)) {
+		if (pamsshagentauth_key_equal(found, key)) {
 			found_key = 1;
 			pamsshagentauth_logit("matching key found: file %s, line %lu",
 			    file, linenum);
-			fp = key_fingerprint(found, SSH_FP_MD5, SSH_FP_HEX);
+			fp = pamsshagentauth_key_fingerprint(found, SSH_FP_MD5, SSH_FP_HEX);
 			pamsshagentauth_logit("Found matching %s key: %s",
-			    key_type(found), fp);
-			xfree(fp);
+			    pamsshagentauth_key_type(found), fp);
+			pamsshagentauth_xfree(fp);
 			break;
 		}
 	}
 	fclose(f);
-	key_free(found);
+	pamsshagentauth_key_free(found);
 	if (!found_key)
 		pamsshagentauth_verbose("key not found");
 	return found_key;
