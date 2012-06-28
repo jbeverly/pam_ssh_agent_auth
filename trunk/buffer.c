@@ -31,12 +31,12 @@
 /* Initializes the buffer structure. */
 
 void
-buffer_init(Buffer *buffer)
+pamsshagentauth_buffer_init(Buffer *buffer)
 {
 	const u_int len = 4096;
 
 	buffer->alloc = 0;
-	buffer->buf = xmalloc(len);
+	buffer->buf = pamsshagentauth_xmalloc(len);
 	buffer->alloc = len;
 	buffer->offset = 0;
 	buffer->end = 0;
@@ -45,12 +45,12 @@ buffer_init(Buffer *buffer)
 /* Frees any memory used for the buffer. */
 
 void
-buffer_free(Buffer *buffer)
+pamsshagentauth_buffer_free(Buffer *buffer)
 {
 	if (buffer->alloc > 0) {
 		memset(buffer->buf, 0, buffer->alloc);
 		buffer->alloc = 0;
-		xfree(buffer->buf);
+		pamsshagentauth_xfree(buffer->buf);
 	}
 }
 
@@ -60,7 +60,7 @@ buffer_free(Buffer *buffer)
  */
 
 void
-buffer_clear(Buffer *buffer)
+pamsshagentauth_buffer_clear(Buffer *buffer)
 {
 	buffer->offset = 0;
 	buffer->end = 0;
@@ -69,10 +69,10 @@ buffer_clear(Buffer *buffer)
 /* Appends data to the buffer, expanding it if necessary. */
 
 void
-buffer_append(Buffer *buffer, const void *data, u_int len)
+pamsshagentauth_buffer_append(Buffer *buffer, const void *data, u_int len)
 {
 	void *p;
-	p = buffer_append_space(buffer, len);
+	p = pamsshagentauth_buffer_append_space(buffer, len);
 	memcpy(p, data, len);
 }
 
@@ -100,13 +100,13 @@ buffer_compact(Buffer *buffer)
  */
 
 void *
-buffer_append_space(Buffer *buffer, u_int len)
+pamsshagentauth_buffer_append_space(Buffer *buffer, u_int len)
 {
 	u_int newlen;
 	void *p;
 
 	if (len > BUFFER_MAX_CHUNK)
-		fatal("buffer_append_space: len %u not supported", len);
+		pamsshagentauth_fatal("buffer_append_space: len %u not supported", len);
 
 	/* If the buffer is empty, start using it from the beginning. */
 	if (buffer->offset == buffer->end) {
@@ -128,9 +128,9 @@ restart:
 	/* Increase the size of the buffer and retry. */
 	newlen = roundup(buffer->alloc + len, BUFFER_ALLOCSZ);
 	if (newlen > BUFFER_MAX_LEN)
-		fatal("buffer_append_space: alloc %u not supported",
+		pamsshagentauth_fatal("buffer_append_space: alloc %u not supported",
 		    newlen);
-	buffer->buf = xrealloc(buffer->buf, 1, newlen);
+	buffer->buf = pamsshagentauth_xrealloc(buffer->buf, 1, newlen);
 	buffer->alloc = newlen;
 	goto restart;
 	/* NOTREACHED */
@@ -141,7 +141,7 @@ restart:
  * This must follow the same math as buffer_append_space
  */
 int
-buffer_check_alloc(Buffer *buffer, u_int len)
+pamsshagentauth_buffer_check_alloc(Buffer *buffer, u_int len)
 {
 	if (buffer->offset == buffer->end) {
 		buffer->offset = 0;
@@ -160,7 +160,7 @@ buffer_check_alloc(Buffer *buffer, u_int len)
 /* Returns the number of bytes of data in the buffer. */
 
 u_int
-buffer_len(Buffer *buffer)
+pamsshagentauth_buffer_len(Buffer *buffer)
 {
 	return buffer->end - buffer->offset;
 }
@@ -168,10 +168,10 @@ buffer_len(Buffer *buffer)
 /* Gets data from the beginning of the buffer. */
 
 int
-buffer_get_ret(Buffer *buffer, void *buf, u_int len)
+pamsshagentauth_buffer_get_ret(Buffer *buffer, void *buf, u_int len)
 {
 	if (len > buffer->end - buffer->offset) {
-		logerror("buffer_get_ret: trying to get more bytes %d than in buffer %d",
+		pamsshagentauth_logerror("buffer_get_ret: trying to get more bytes %d than in buffer %d",
 		    len, buffer->end - buffer->offset);
 		return (-1);
 	}
@@ -181,19 +181,19 @@ buffer_get_ret(Buffer *buffer, void *buf, u_int len)
 }
 
 void
-buffer_get(Buffer *buffer, void *buf, u_int len)
+pamsshagentauth_buffer_get(Buffer *buffer, void *buf, u_int len)
 {
-	if (buffer_get_ret(buffer, buf, len) == -1)
-		fatal("buffer_get: buffer error");
+	if (pamsshagentauth_buffer_get_ret(buffer, buf, len) == -1)
+		pamsshagentauth_fatal("buffer_get: buffer error");
 }
 
 /* Consumes the given number of bytes from the beginning of the buffer. */
 
 int
-buffer_consume_ret(Buffer *buffer, u_int bytes)
+pamsshagentauth_buffer_consume_ret(Buffer *buffer, u_int bytes)
 {
 	if (bytes > buffer->end - buffer->offset) {
-		logerror("buffer_consume_ret: trying to get more bytes than in buffer");
+		pamsshagentauth_logerror("buffer_consume_ret: trying to get more bytes than in buffer");
 		return (-1);
 	}
 	buffer->offset += bytes;
@@ -201,16 +201,16 @@ buffer_consume_ret(Buffer *buffer, u_int bytes)
 }
 
 void
-buffer_consume(Buffer *buffer, u_int bytes)
+pamsshagentauth_buffer_consume(Buffer *buffer, u_int bytes)
 {
-	if (buffer_consume_ret(buffer, bytes) == -1)
-		fatal("buffer_consume: buffer error");
+	if (pamsshagentauth_buffer_consume_ret(buffer, bytes) == -1)
+		pamsshagentauth_fatal("buffer_consume: buffer error");
 }
 
 /* Consumes the given number of bytes from the end of the buffer. */
 
 int
-buffer_consume_end_ret(Buffer *buffer, u_int bytes)
+pamsshagentauth_buffer_consume_end_ret(Buffer *buffer, u_int bytes)
 {
 	if (bytes > buffer->end - buffer->offset)
 		return (-1);
@@ -219,16 +219,16 @@ buffer_consume_end_ret(Buffer *buffer, u_int bytes)
 }
 
 void
-buffer_consume_end(Buffer *buffer, u_int bytes)
+pamsshagentauth_buffer_consume_end(Buffer *buffer, u_int bytes)
 {
-	if (buffer_consume_end_ret(buffer, bytes) == -1)
-		fatal("buffer_consume_end: trying to get more bytes than in buffer");
+	if (pamsshagentauth_buffer_consume_end_ret(buffer, bytes) == -1)
+		pamsshagentauth_fatal("buffer_consume_end: trying to get more bytes than in buffer");
 }
 
 /* Returns a pointer to the first used byte in the buffer. */
 
 void *
-buffer_ptr(Buffer *buffer)
+pamsshagentauth_buffer_ptr(Buffer *buffer)
 {
 	return buffer->buf + buffer->offset;
 }
@@ -236,7 +236,7 @@ buffer_ptr(Buffer *buffer)
 /* Dumps the contents of the buffer to stderr. */
 
 void
-buffer_dump(Buffer *buffer)
+pamsshagentauth_buffer_dump(Buffer *buffer)
 {
 	u_int i;
 	u_char *ucp = buffer->buf;

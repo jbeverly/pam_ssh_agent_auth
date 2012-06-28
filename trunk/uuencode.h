@@ -24,6 +24,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-int	 uuencode(const u_char *, u_int, char *, size_t);
-int	 uudecode(const char *, u_char *, size_t);
-void	 dump_base64(FILE *, u_char *, u_int);
+int	 pamsshagentauth_uuencode(const u_char *, u_int, char *, size_t);
+int	 pamsshagentauth_uudecode(const char *, u_char *, size_t);
+void	 pamsshagentauth_dump_base64(FILE *, u_char *, u_int);

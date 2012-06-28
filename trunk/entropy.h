@@ -29,8 +29,8 @@
 
 #include "buffer.h"
 
-void seed_rng(void);
-void init_rng(void);
+void pamsshagentauth_seed_rng(void);
+void pamsshagentauth_init_rng(void);
 
 void rexec_send_rng_seed(Buffer *);
 void rexec_recv_rng_seed(Buffer *);

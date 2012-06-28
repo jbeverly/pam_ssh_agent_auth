@@ -103,6 +103,15 @@ would expand to /secure/foobar.baz.com/fred/authorized_keys.
 In this case, we have not specified allow_user_owned_authorized_keys_file, 
 so this file must be owned by root.
 
+=item C<auth [success=3 default=ignore] pam_ssh_agent_auth.so file=~/.ssh/authorized_keys debug>
+
+This pam.d config format allows for more control over how pam handles success and failure. In this example,
+we use success=3, which specifies that when this module succeeds, pam should jump over the next 3 auth modules
+and continue from there. This is useful, for instance, if /etc/pam.d/common-auth is included, and contains
+3 "auth required" or similar module rules that we wish to skip, but we wish not to skip other auth rules.
+
+For more information, please see http://linux.die.net/man/5/pam.d
+
 =back
 
 =cut

@@ -103,7 +103,7 @@ _gettemp(path, doopen, domkdir, slen)
 	while (trv >= path && *trv == 'X') {
 		char c;
 
-		pid = (arc4random() & 0xffff) % (26+26);
+		pid = (pamsshagentauth_arc4random() & 0xffff) % (26+26);
 		if (pid < 26)
 			c = pid + 'A';
 		else

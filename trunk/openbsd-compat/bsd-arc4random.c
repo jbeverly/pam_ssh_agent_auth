@@ -39,16 +39,16 @@ static int rc4_ready = 0;
 static RC4_KEY rc4;
 
 unsigned int
-arc4random(void)
+pamsshagentauth_arc4random(void)
 {
 	unsigned int r = 0;
 	static int first_time = 1;
 
 	if (rc4_ready <= 0) {
 		if (first_time)
-			seed_rng();
+			pamsshagentauth_seed_rng();
 		first_time = 0;
-		arc4random_stir();
+		pamsshagentauth_arc4random_stir();
 	}
 
 	RC4(&rc4, sizeof(r), (unsigned char *)&r, (unsigned char *)&r);
@@ -59,7 +59,7 @@ arc4random(void)
 }
 
 void
-arc4random_stir(void)
+pamsshagentauth_arc4random_stir(void)
 {
 	unsigned char rand_buf[SEED_SIZE];
 	int i;
@@ -67,7 +67,7 @@ arc4random_stir(void)
 	memset(&rc4, 0, sizeof(rc4));
 	memset(&rand_buf, 0, sizeof(rand_buf));
 	if (RAND_bytes(rand_buf, sizeof(rand_buf)) <= 0)
-		fatal("Couldn't obtain random bytes (error %ld)",
+		pamsshagentauth_fatal("Couldn't obtain random bytes (error %ld)",
 		    ERR_get_error());
 	RC4_set_key(&rc4, sizeof(rand_buf), rand_buf);
 
