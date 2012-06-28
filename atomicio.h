@@ -32,14 +32,14 @@
 /*
  * Ensure all of data on socket comes through. f==read || f==vwrite
  */
-size_t	atomicio(ssize_t (*)(int, void *, size_t), int, void *, size_t);
+size_t	pamsshagentauth_atomicio(ssize_t (*)(int, void *, size_t), int, void *, size_t);
 
 #define vwrite (ssize_t (*)(int, void *, size_t))write
 
 /*
  * ensure all of data on socket comes through. f==readv || f==writev
  */
-size_t	atomiciov(ssize_t (*)(int, const struct iovec *, int),
+size_t	pamsshagentauth_atomiciov(ssize_t (*)(int, const struct iovec *, int),
     int, const struct iovec *, int);
 
 #endif /* _ATOMICIO_H */

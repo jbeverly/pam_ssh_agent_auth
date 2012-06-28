@@ -79,11 +79,11 @@
  */
 #define	UNVIS_END	1	/* no more characters */
 
-char	*vis(char *, int, int, int);
-int	strvis(char *, const char *, int);
-int	strnvis(char *, const char *, size_t, int)
+char	*pamsshagentauth_vis(char *, int, int, int);
+int	pamsshagentauth_strvis(char *, const char *, int);
+int	pamsshagentauth_strnvis(char *, const char *, size_t, int)
 		__attribute__ ((__bounded__(__string__,1,3)));
-int	strvisx(char *, const char *, size_t, int)
+int	pamsshagentauth_strvisx(char *, const char *, size_t, int)
 		__attribute__ ((__bounded__(__string__,1,3)));
 int	strunvis(char *, const char *);
 int	unvis(char *, char, int *, int);

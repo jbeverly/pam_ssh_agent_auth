@@ -26,7 +26,7 @@
 
 /* default implementation */
 void
-cleanup_exit(int i)
+pamsshagentauth_cleanup_exit(int i)
 {
 	_exit(i);
 }

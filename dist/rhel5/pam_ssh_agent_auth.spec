@@ -1,13 +1,13 @@
 Summary: PAM module providing authentication via ssh-agent
 Name: pam_ssh_agent_auth
-Version: 0.9.3
+Version: 0.9.4
 Release: 1%{?dist}
 License: BSD
 Group: System Environment Base
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-%(id -un)-root
 Source0: http://downloads.sourceforge.net/pamsshagentauth/%{name}-%{version}.tar.bz2
 Requires: openssl >= 0.9.8, pam, openssh-server, openssh
-BuildRequires: openssl-devel >= 0.9.8, pam-devel, perl, sed
+BuildRequires: openssl-devel >= 0.9.8, pam-devel, perl, sed, selinux-devel
 Vendor: Jamie Beverly
 Packager: Jamie Beverly
 
@@ -28,7 +28,7 @@ for use with su as an alternative to wheel.
 
 %build
 %define _libexecdir /%{_lib}/security
-%configure --with-selinux --with-sudo-hack
+%configure --with-selinux --enable-sudo-hack
 %{__make} %{?_smp_mflags}
 
 %install
@@ -42,6 +42,10 @@ for use with su as an alternative to wheel.
 %doc %{_mandir}/man8/pam_ssh_agent_auth.8*
 
 %changelog
+* Wed Jun 26 2012 Jamie Beverly <soupboy@sourceforge.net> - 0.9.4
+- Prefixed symbol names to avoid collision with globally dl_open'd symbols names
+- updated Makefile.in as per http://sourceforge.net/tracker/?func=detail&aid=3510464&group_id=249556&atid=1126337
+- updated documentation for pam configuration
 * Wed Jan 26 2011 Jamie Beverly <jamie.r.beverly@gmail.com> - 0.9.3
 - Minor bug fixes
 - Moved logging of signature and key file from debug to normal output
