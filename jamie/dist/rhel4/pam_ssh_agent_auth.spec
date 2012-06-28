@@ -7,7 +7,7 @@ Group: System Environment Base
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-%(id -un)-root
 Source0: http://downloads.sourceforge.net/pamsshagentauth/%{name}-%{version}.tar.bz2
 Requires: openssl >= 0.9.8, pam, openssh-server, openssh
-BuildRequires: openssl-devel >= 0.9.8, pam-devel, perl, sed
+BuildRequires: openssl-devel >= 0.9.8, pam-devel, perl, sed, selinux-devel
 Vendor: Jamie Beverly
 Packager: Jamie Beverly
 
@@ -28,7 +28,7 @@ for use with su as an alternative to wheel.
 
 %build
 %define _libexecdir /%{_lib}/security
-%configure --with-selinux --with-sudo-hack
+%configure --with-selinux --enable-sudo-hack
 %{__make} %{?_smp_mflags}
 
 %install
