@@ -25,76 +25,76 @@
 #include "log.h"
 
 void *
-xmalloc(size_t size)
+pamsshagentauth_xmalloc(size_t size)
 {
 	void *ptr;
 
 	if (size == 0)
-		fatal("xmalloc: zero size");
+		pamsshagentauth_fatal("xmalloc: zero size");
 	ptr = malloc(size);
 	if (ptr == NULL)
-		fatal("xmalloc: out of memory (allocating %lu bytes)", (u_long) size);
+		pamsshagentauth_fatal("xmalloc: out of memory (allocating %lu bytes)", (u_long) size);
 	return ptr;
 }
 
 void *
-xcalloc(size_t nmemb, size_t size)
+pamsshagentauth_xcalloc(size_t nmemb, size_t size)
 {
 	void *ptr;
 
 	if (size == 0 || nmemb == 0)
-		fatal("xcalloc: zero size");
+		pamsshagentauth_fatal("xcalloc: zero size");
 	if (SIZE_T_MAX / nmemb < size)
-		fatal("xcalloc: nmemb * size > SIZE_T_MAX");
+		pamsshagentauth_fatal("xcalloc: nmemb * size > SIZE_T_MAX");
 	ptr = calloc(nmemb, size);
 	if (ptr == NULL)
-		fatal("xcalloc: out of memory (allocating %lu bytes)",
+		pamsshagentauth_fatal("xcalloc: out of memory (allocating %lu bytes)",
 		    (u_long)(size * nmemb));
 	return ptr;
 }
 
 void *
-xrealloc(void *ptr, size_t nmemb, size_t size)
+pamsshagentauth_xrealloc(void *ptr, size_t nmemb, size_t size)
 {
 	void *new_ptr;
 	size_t new_size = nmemb * size;
 
 	if (new_size == 0)
-		fatal("xrealloc: zero size");
+		pamsshagentauth_fatal("xrealloc: zero size");
 	if (SIZE_T_MAX / nmemb < size)
-		fatal("xrealloc: nmemb * size > SIZE_T_MAX");
+		pamsshagentauth_fatal("xrealloc: nmemb * size > SIZE_T_MAX");
 	if (ptr == NULL)
 		new_ptr = malloc(new_size);
 	else
 		new_ptr = realloc(ptr, new_size);
 	if (new_ptr == NULL)
-		fatal("xrealloc: out of memory (new_size %lu bytes)",
+		pamsshagentauth_fatal("xrealloc: out of memory (new_size %lu bytes)",
 		    (u_long) new_size);
 	return new_ptr;
 }
 
 void
-xfree(void *ptr)
+pamsshagentauth_xfree(void *ptr)
 {
 	if (ptr == NULL)
-		fatal("xfree: NULL pointer given as argument");
+		pamsshagentauth_fatal("xfree: NULL pointer given as argument");
 	free(ptr);
 }
 
 char *
-xstrdup(const char *str)
+pamsshagentauth_xstrdup(const char *str)
 {
 	size_t len;
 	char *cp;
 
 	len = strlen(str) + 1;
-	cp = xmalloc(len);
-	strlcpy(cp, str, len);
+	cp = pamsshagentauth_xmalloc(len);
+	pamsshagentauth_strlcpy(cp, str, len);
 	return cp;
 }
 
 int
-xasprintf(char **ret, const char *fmt, ...)
+pamsshagentauth_xasprintf(char **ret, const char *fmt, ...)
 {
 	va_list ap;
 	int i;
@@ -104,7 +104,7 @@ xasprintf(char **ret, const char *fmt, ...)
 	va_end(ap);
 
 	if (i < 0 || *ret == NULL)
-		fatal("xasprintf: could not allocate memory");
+		pamsshagentauth_fatal("xasprintf: could not allocate memory");
 
 	return (i);
 }

@@ -54,7 +54,7 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 	Buffer b;
 
 	if (key == NULL || key->type != KEY_DSA || key->dsa == NULL) {
-		logerror("ssh_dss_sign: no DSA key");
+		pamsshagentauth_logerror("ssh_dss_sign: no DSA key");
 		return -1;
 	}
 	EVP_DigestInit(&md, evp_md);
@@ -65,14 +65,14 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 	memset(digest, 'd', sizeof(digest));
 
 	if (sig == NULL) {
-		logerror("ssh_dss_sign: sign failed");
+		pamsshagentauth_logerror("ssh_dss_sign: sign failed");
 		return -1;
 	}
 
 	rlen = BN_num_bytes(sig->r);
 	slen = BN_num_bytes(sig->s);
 	if (rlen > INTBLOB_LEN || slen > INTBLOB_LEN) {
-		logerror("bad sig size %u %u", rlen, slen);
+		pamsshagentauth_logerror("bad sig size %u %u", rlen, slen);
 		DSA_SIG_free(sig);
 		return -1;
 	}
@@ -85,22 +85,22 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 		if (lenp != NULL)
 			*lenp = SIGBLOB_LEN;
 		if (sigp != NULL) {
-			*sigp = xmalloc(SIGBLOB_LEN);
+			*sigp = pamsshagentauth_xmalloc(SIGBLOB_LEN);
 			memcpy(*sigp, sigblob, SIGBLOB_LEN);
 		}
 	} else {
 		/* ietf-drafts */
-		buffer_init(&b);
-		buffer_put_cstring(&b, "ssh-dss");
-		buffer_put_string(&b, sigblob, SIGBLOB_LEN);
-		len = buffer_len(&b);
+		pamsshagentauth_buffer_init(&b);
+		pamsshagentauth_buffer_put_cstring(&b, "ssh-dss");
+		pamsshagentauth_buffer_put_string(&b, sigblob, SIGBLOB_LEN);
+		len = pamsshagentauth_buffer_len(&b);
 		if (lenp != NULL)
 			*lenp = len;
 		if (sigp != NULL) {
-			*sigp = xmalloc(len);
-			memcpy(*sigp, buffer_ptr(&b), len);
+			*sigp = pamsshagentauth_xmalloc(len);
+			memcpy(*sigp, pamsshagentauth_buffer_ptr(&b), len);
 		}
-		buffer_free(&b);
+		pamsshagentauth_buffer_free(&b);
 	}
 	return 0;
 }
@@ -117,57 +117,57 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	Buffer b;
 
 	if (key == NULL || key->type != KEY_DSA || key->dsa == NULL) {
-		logerror("ssh_dss_verify: no DSA key");
+		pamsshagentauth_logerror("ssh_dss_verify: no DSA key");
 		return -1;
 	}
 
 	/* fetch signature */
 	if (datafellows & SSH_BUG_SIGBLOB) {
-		sigblob = xmalloc(signaturelen);
+		sigblob = pamsshagentauth_xmalloc(signaturelen);
 		memcpy(sigblob, signature, signaturelen);
 		len = signaturelen;
 	} else {
 		/* ietf-drafts */
 		char *ktype;
-		buffer_init(&b);
-		buffer_append(&b, signature, signaturelen);
-		ktype = buffer_get_string(&b, NULL);
+		pamsshagentauth_buffer_init(&b);
+		pamsshagentauth_buffer_append(&b, signature, signaturelen);
+		ktype = pamsshagentauth_buffer_get_string(&b, NULL);
 		if (strcmp("ssh-dss", ktype) != 0) {
-			logerror("ssh_dss_verify: cannot handle type %s", ktype);
-			buffer_free(&b);
-			xfree(ktype);
+			pamsshagentauth_logerror("ssh_dss_verify: cannot handle type %s", ktype);
+			pamsshagentauth_buffer_free(&b);
+			pamsshagentauth_xfree(ktype);
 			return -1;
 		}
-		xfree(ktype);
-		sigblob = buffer_get_string(&b, &len);
-		rlen = buffer_len(&b);
-		buffer_free(&b);
+		pamsshagentauth_xfree(ktype);
+		sigblob = pamsshagentauth_buffer_get_string(&b, &len);
+		rlen = pamsshagentauth_buffer_len(&b);
+		pamsshagentauth_buffer_free(&b);
 		if (rlen != 0) {
-			logerror("ssh_dss_verify: "
+			pamsshagentauth_logerror("ssh_dss_verify: "
 			    "remaining bytes in signature %d", rlen);
-			xfree(sigblob);
+			pamsshagentauth_xfree(sigblob);
 			return -1;
 		}
 	}
 
 	if (len != SIGBLOB_LEN) {
-		fatal("bad sigbloblen %u != SIGBLOB_LEN", len);
+		pamsshagentauth_fatal("bad sigbloblen %u != SIGBLOB_LEN", len);
 	}
 
 	/* parse signature */
 	if ((sig = DSA_SIG_new()) == NULL)
-		fatal("ssh_dss_verify: DSA_SIG_new failed");
+		pamsshagentauth_fatal("ssh_dss_verify: DSA_SIG_new failed");
 	if ((sig->r = BN_new()) == NULL)
-		fatal("ssh_dss_verify: BN_new failed");
+		pamsshagentauth_fatal("ssh_dss_verify: BN_new failed");
 	if ((sig->s = BN_new()) == NULL)
-		fatal("ssh_dss_verify: BN_new failed");
+		pamsshagentauth_fatal("ssh_dss_verify: BN_new failed");
 	if ((BN_bin2bn(sigblob, INTBLOB_LEN, sig->r) == NULL) ||
 	    (BN_bin2bn(sigblob+ INTBLOB_LEN, INTBLOB_LEN, sig->s) == NULL))
-		fatal("ssh_dss_verify: BN_bin2bn failed");
+		pamsshagentauth_fatal("ssh_dss_verify: BN_bin2bn failed");
 
 	/* clean up */
 	memset(sigblob, 0, len);
-	xfree(sigblob);
+	pamsshagentauth_xfree(sigblob);
 
 	/* sha1 the data */
 	EVP_DigestInit(&md, evp_md);
@@ -179,7 +179,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 
 	DSA_SIG_free(sig);
 
-	verbose("ssh_dss_verify: signature %s",
+	pamsshagentauth_verbose("ssh_dss_verify: signature %s",
 	    ret == 1 ? "correct" : ret == 0 ? "incorrect" : "error");
 	return ret;
 }

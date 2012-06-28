@@ -23,63 +23,63 @@ typedef struct {
 	u_int	 end;		/* Offset of last byte containing data. */
 }       Buffer;
 
-void	 buffer_init(Buffer *);
-void	 buffer_clear(Buffer *);
-void	 buffer_free(Buffer *);
+void	 pamsshagentauth_buffer_init(Buffer *);
+void	 pamsshagentauth_buffer_clear(Buffer *);
+void	 pamsshagentauth_buffer_free(Buffer *);
 
-u_int	 buffer_len(Buffer *);
-void	*buffer_ptr(Buffer *);
+u_int	 pamsshagentauth_buffer_len(Buffer *);
+void	*pamsshagentauth_buffer_ptr(Buffer *);
 
-void	 buffer_append(Buffer *, const void *, u_int);
-void	*buffer_append_space(Buffer *, u_int);
+void	 pamsshagentauth_buffer_append(Buffer *, const void *, u_int);
+void	*pamsshagentauth_buffer_append_space(Buffer *, u_int);
 
-int	 buffer_check_alloc(Buffer *, u_int);
+int	 pamsshagentauth_buffer_check_alloc(Buffer *, u_int);
 
-void	 buffer_get(Buffer *, void *, u_int);
+void	 pamsshagentauth_buffer_get(Buffer *, void *, u_int);
 
-void	 buffer_consume(Buffer *, u_int);
-void	 buffer_consume_end(Buffer *, u_int);
+void	 pamsshagentauth_buffer_consume(Buffer *, u_int);
+void	 pamsshagentauth_buffer_consume_end(Buffer *, u_int);
 
-void     buffer_dump(Buffer *);
+void     pamsshagentauth_buffer_dump(Buffer *);
 
-int	 buffer_get_ret(Buffer *, void *, u_int);
-int	 buffer_consume_ret(Buffer *, u_int);
-int	 buffer_consume_end_ret(Buffer *, u_int);
+int	 pamsshagentauth_buffer_get_ret(Buffer *, void *, u_int);
+int	 pamsshagentauth_buffer_consume_ret(Buffer *, u_int);
+int	 pamsshagentauth_buffer_consume_end_ret(Buffer *, u_int);
 
 #include <openssl/bn.h>
 
-void    buffer_put_bignum(Buffer *, const BIGNUM *);
-void    buffer_put_bignum2(Buffer *, const BIGNUM *);
-void	buffer_get_bignum(Buffer *, BIGNUM *);
-void	buffer_get_bignum2(Buffer *, BIGNUM *);
+void    pamsshagentauth_buffer_put_bignum(Buffer *, const BIGNUM *);
+void    pamsshagentauth_buffer_put_bignum2(Buffer *, const BIGNUM *);
+void	pamsshagentauth_buffer_get_bignum(Buffer *, BIGNUM *);
+void	pamsshagentauth_buffer_get_bignum2(Buffer *, BIGNUM *);
 
-u_short	buffer_get_short(Buffer *);
-void	buffer_put_short(Buffer *, u_short);
+u_short	pamsshagentauth_buffer_get_short(Buffer *);
+void	pamsshagentauth_buffer_put_short(Buffer *, u_short);
 
-u_int	buffer_get_int(Buffer *);
-void    buffer_put_int(Buffer *, u_int);
+u_int	pamsshagentauth_buffer_get_int(Buffer *);
+void    pamsshagentauth_buffer_put_int(Buffer *, u_int);
 
-u_int64_t buffer_get_int64(Buffer *);
-void	buffer_put_int64(Buffer *, u_int64_t);
+u_int64_t pamsshagentauth_buffer_get_int64(Buffer *);
+void	pamsshagentauth_buffer_put_int64(Buffer *, u_int64_t);
 
-int     buffer_get_char(Buffer *);
-void    buffer_put_char(Buffer *, int);
+int     pamsshagentauth_buffer_get_char(Buffer *);
+void    pamsshagentauth_buffer_put_char(Buffer *, int);
 
-void   *buffer_get_string(Buffer *, u_int *);
-void    buffer_put_string(Buffer *, const void *, u_int);
-void	buffer_put_cstring(Buffer *, const char *);
+void   *pamsshagentauth_buffer_get_string(Buffer *, u_int *);
+void    pamsshagentauth_buffer_put_string(Buffer *, const void *, u_int);
+void	pamsshagentauth_buffer_put_cstring(Buffer *, const char *);
 
 #define buffer_skip_string(b) \
-    do { u_int l = buffer_get_int(b); buffer_consume(b, l); } while (0)
+    do { u_int l = pamsshagentauth_buffer_get_int(b); pamsshagentauth_buffer_consume(b, l); } while (0)
 
-int	buffer_put_bignum_ret(Buffer *, const BIGNUM *);
-int	buffer_get_bignum_ret(Buffer *, BIGNUM *);
-int	buffer_put_bignum2_ret(Buffer *, const BIGNUM *);
-int	buffer_get_bignum2_ret(Buffer *, BIGNUM *);
-int	buffer_get_short_ret(u_short *, Buffer *);
-int	buffer_get_int_ret(u_int *, Buffer *);
-int	buffer_get_int64_ret(u_int64_t *, Buffer *);
-void	*buffer_get_string_ret(Buffer *, u_int *);
-int	buffer_get_char_ret(char *, Buffer *);
+int	pamsshagentauth_buffer_put_bignum_ret(Buffer *, const BIGNUM *);
+int	pamsshagentauth_buffer_get_bignum_ret(Buffer *, BIGNUM *);
+int	pamsshagentauth_buffer_put_bignum2_ret(Buffer *, const BIGNUM *);
+int	pamsshagentauth_buffer_get_bignum2_ret(Buffer *, BIGNUM *);
+int	pamsshagentauth_buffer_get_short_ret(u_short *, Buffer *);
+int	pamsshagentauth_buffer_get_int_ret(u_int *, Buffer *);
+int	pamsshagentauth_buffer_get_int64_ret(u_int64_t *, Buffer *);
+void	*pamsshagentauth_buffer_get_string_ret(Buffer *, u_int *);
+int	pamsshagentauth_buffer_get_char_ret(char *, Buffer *);
 
 #endif				/* BUFFER_H */

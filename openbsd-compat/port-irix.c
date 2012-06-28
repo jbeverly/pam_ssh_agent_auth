@@ -58,30 +58,30 @@ irix_setusercontext(struct passwd *pw)
 #ifdef WITH_IRIX_JOBS
         jid = jlimit_startjob(pw->pw_name, pw->pw_uid, "interactive");
         if (jid == -1)
-                fatal("Failed to create job container: %.100s",
+                pamsshagentauth_fatal("Failed to create job container: %.100s",
                     strerror(errno));
 #endif /* WITH_IRIX_JOBS */
 #ifdef WITH_IRIX_ARRAY
         /* initialize array session */
         if (jid == 0  && newarraysess() != 0)
-                fatal("Failed to set up new array session: %.100s",
+                pamsshagentauth_fatal("Failed to set up new array session: %.100s",
                     strerror(errno));
 #endif /* WITH_IRIX_ARRAY */
 #ifdef WITH_IRIX_PROJECT
         /* initialize irix project info */
         if ((projid = getdfltprojuser(pw->pw_name)) == -1) {
-                verbose("Failed to get project id, using projid 0");
+                pamsshagentauth_verbose("Failed to get project id, using projid 0");
                 projid = 0;
         }
         if (setprid(projid))
-                fatal("Failed to initialize project %d for %s: %.100s",
+                pamsshagentauth_fatal("Failed to initialize project %d for %s: %.100s",
                     (int)projid, pw->pw_name, strerror(errno));
 #endif /* WITH_IRIX_PROJECT */
 #ifdef WITH_IRIX_AUDIT
         if (sysconf(_SC_AUDIT)) {
-                verbose("Setting sat id to %d", (int) pw->pw_uid);
+                pamsshagentauth_verbose("Setting sat id to %d", (int) pw->pw_uid);
                 if (satsetid(pw->pw_uid))
-                        verbose("error setting satid: %.100s", strerror(errno));
+                        pamsshagentauth_verbose("error setting satid: %.100s", strerror(errno));
         }
 #endif /* WITH_IRIX_AUDIT */
 }

@@ -54,7 +54,7 @@
  * vis - visually encode characters
  */
 char *
-vis(char *dst, int c, int flag, int nextc)
+pamsshagentauth_vis(char *dst, int c, int flag, int nextc)
 {
 	if (isvisible(c)) {
 		*dst++ = c;
@@ -151,19 +151,19 @@ done:
  *	This is useful for encoding a block of data.
  */
 int
-strvis(char *dst, const char *src, int flag)
+pamsshagentauth_strvis(char *dst, const char *src, int flag)
 {
 	char c;
 	char *start;
 
 	for (start = dst; (c = *src);)
-		dst = vis(dst, c, flag, *++src);
+		dst = pamsshagentauth_vis(dst, c, flag, *++src);
 	*dst = '\0';
 	return (dst - start);
 }
 
 int
-strnvis(char *dst, const char *src, size_t siz, int flag)
+pamsshagentauth_strnvis(char *dst, const char *src, size_t siz, int flag)
 {
 	char *start, *end;
 	char tbuf[5];
@@ -186,7 +186,7 @@ strnvis(char *dst, const char *src, size_t siz, int flag)
 			}
 			src++;
 		} else {
-			i = vis(tbuf, c, flag, *++src) - tbuf;
+			i = pamsshagentauth_vis(tbuf, c, flag, *++src) - tbuf;
 			if (dst + i <= end) {
 				memcpy(dst, tbuf, i);
 				dst += i;
@@ -201,23 +201,23 @@ strnvis(char *dst, const char *src, size_t siz, int flag)
 	if (dst + i > end) {
 		/* adjust return value for truncation */
 		while ((c = *src))
-			dst += vis(tbuf, c, flag, *++src) - tbuf;
+			dst += pamsshagentauth_vis(tbuf, c, flag, *++src) - tbuf;
 	}
 	return (dst - start);
 }
 
 int
-strvisx(char *dst, const char *src, size_t len, int flag)
+pamsshagentauth_strvisx(char *dst, const char *src, size_t len, int flag)
 {
 	char c;
 	char *start;
 
 	for (start = dst; len > 1; len--) {
 		c = *src;
-		dst = vis(dst, c, flag, *++src);
+		dst = pamsshagentauth_vis(dst, c, flag, *++src);
 	}
 	if (len)
-		dst = vis(dst, *src, flag, '\0');
+		dst = pamsshagentauth_vis(dst, *src, flag, '\0');
 	*dst = '\0';
 	return (dst - start);
 }

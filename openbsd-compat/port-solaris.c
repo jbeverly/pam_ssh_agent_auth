@@ -53,17 +53,17 @@ get_active_process_contract_id(void)
 	ct_stathdl_t stathdl;
 
 	if ((stat_fd = open64(CT_LATEST, O_RDONLY)) == -1) {
-		logerror("%s: Error opening 'latest' process "
+		pamsshagentauth_logerror("%s: Error opening 'latest' process "
 		    "contract: %s", __func__, strerror(errno));
 		return -1;
 	}
 	if (ct_status_read(stat_fd, CTD_COMMON, &stathdl) != 0) {
-		logerror("%s: Error reading process contract "
+		pamsshagentauth_logerror("%s: Error reading process contract "
 		    "status: %s", __func__, strerror(errno));
 		goto out;
 	}
 	if ((ctid = ct_status_get_id(stathdl)) < 0) {
-		logerror("%s: Error getting process contract id: %s",
+		pamsshagentauth_logerror("%s: Error getting process contract id: %s",
 		    __func__, strerror(errno));
 		goto out;
 	}
@@ -78,39 +78,39 @@ void
 solaris_contract_pre_fork(void)
 {
 	if ((tmpl_fd = open64(CT_TEMPLATE, O_RDWR)) == -1) {
-		logerror("%s: open %s: %s", __func__,
+		pamsshagentauth_logerror("%s: open %s: %s", __func__,
 		    CT_TEMPLATE, strerror(errno));
 		return;
 	}
 
-	verbose("%s: setting up process contract template on fd %d",
+	pamsshagentauth_verbose("%s: setting up process contract template on fd %d",
 	    __func__, tmpl_fd);
 
 	/* First we set the template parameters and event sets. */
 	if (ct_pr_tmpl_set_param(tmpl_fd, CT_PR_PGRPONLY) != 0) {
-		logerror("%s: Error setting process contract parameter set "
+		pamsshagentauth_logerror("%s: Error setting process contract parameter set "
 		    "(pgrponly): %s", __func__, strerror(errno));
 		goto fail;
 	}
 	if (ct_pr_tmpl_set_fatal(tmpl_fd, CT_PR_EV_HWERR) != 0) {
-		logerror("%s: Error setting process contract template "
+		pamsshagentauth_logerror("%s: Error setting process contract template "
 		    "fatal events: %s", __func__, strerror(errno));
 		goto fail;
 	}
 	if (ct_tmpl_set_critical(tmpl_fd, 0) != 0) {
-		logerror("%s: Error setting process contract template "
+		pamsshagentauth_logerror("%s: Error setting process contract template "
 		    "critical events: %s", __func__, strerror(errno));
 		goto fail;
 	}
 	if (ct_tmpl_set_informative(tmpl_fd, CT_PR_EV_HWERR) != 0) {
-		logerror("%s: Error setting process contract template "
+		pamsshagentauth_logerror("%s: Error setting process contract template "
 		    "informative events: %s", __func__, strerror(errno));
 		goto fail;
 	}
 
 	/* Now make this the active template for this process. */
 	if (ct_tmpl_activate(tmpl_fd) != 0) {
-		logerror("%s: Error activating process contract "
+		pamsshagentauth_logerror("%s: Error activating process contract "
 		    "template: %s", __func__, strerror(errno));
 		goto fail;
 	}
@@ -126,12 +126,12 @@ solaris_contract_pre_fork(void)
 void
 solaris_contract_post_fork_child()
 {
-	verbose("%s: clearing process contract template on fd %d",
+	pamsshagentauth_verbose("%s: clearing process contract template on fd %d",
 	    __func__, tmpl_fd);
 
 	/* Clear the active template. */
 	if (ct_tmpl_clear(tmpl_fd) != 0)
-		logerror("%s: Error clearing active process contract "
+		pamsshagentauth_logerror("%s: Error clearing active process contract "
 		    "template: %s", __func__, strerror(errno));
 
 	close(tmpl_fd);
@@ -145,14 +145,14 @@ solaris_contract_post_fork_parent(pid_t pid)
 	char ctl_path[256];
 	int r, ctl_fd = -1, stat_fd = -1;
 
-	verbose("%s: clearing template (fd %d)", __func__, tmpl_fd);
+	pamsshagentauth_verbose("%s: clearing template (fd %d)", __func__, tmpl_fd);
 
 	if (tmpl_fd == -1)
 		return;
 
 	/* First clear the active template. */
 	if ((r = ct_tmpl_clear(tmpl_fd)) != 0)
-		logerror("%s: Error clearing active process contract "
+		pamsshagentauth_logerror("%s: Error clearing active process contract "
 		    "template: %s", __func__, strerror(errno));
 
 	close(tmpl_fd);
@@ -169,17 +169,17 @@ solaris_contract_post_fork_parent(pid_t pid)
 	/* Now lookup and abandon the contract we've created. */
 	ctid = get_active_process_contract_id();
 
-	verbose("%s: abandoning contract id %ld", __func__, ctid);
+	pamsshagentauth_verbose("%s: abandoning contract id %ld", __func__, ctid);
 
 	snprintf(ctl_path, sizeof(ctl_path),
 	    CTFS_ROOT "/process/%ld/ctl", ctid);
 	if ((ctl_fd = open64(ctl_path, O_WRONLY)) < 0) {
-		logerror("%s: Error opening process contract "
+		pamsshagentauth_logerror("%s: Error opening process contract "
 		    "ctl file: %s", __func__, strerror(errno));
 		goto fail;
 	}
 	if (ct_ctl_abandon(ctl_fd) < 0) {
-		logerror("%s: Error abandoning process contract: %s",
+		pamsshagentauth_logerror("%s: Error abandoning process contract: %s",
 		    __func__, strerror(errno));
 		goto fail;
 	}

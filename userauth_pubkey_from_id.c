@@ -66,35 +66,35 @@ userauth_pubkey_from_id(Identity * id)
     if(! pam_user_key_allowed(id->key))
         goto user_auth_clean_exit;
 
-    if(key_to_blob(id->key, &pkblob, &blen) == 0)
+    if(pamsshagentauth_key_to_blob(id->key, &pkblob, &blen) == 0)
         goto user_auth_clean_exit;
 
     /* construct packet to sign and test */
-    buffer_init(&b);
+    pamsshagentauth_buffer_init(&b);
 
-    buffer_put_string(&b, session_id2, session_id_len);
-    buffer_put_char(&b, SSH2_MSG_USERAUTH_REQUEST);
-    buffer_put_cstring(&b, "root");
-    buffer_put_cstring(&b, "ssh-userauth");
-    buffer_put_cstring(&b, "publickey");
-    buffer_put_char(&b, 1);
-    buffer_put_cstring(&b, pkalg);
-    buffer_put_string(&b, pkblob, blen);
+    pamsshagentauth_buffer_put_string(&b, session_id2, session_id_len);
+    pamsshagentauth_buffer_put_char(&b, SSH2_MSG_USERAUTH_REQUEST);
+    pamsshagentauth_buffer_put_cstring(&b, "root");
+    pamsshagentauth_buffer_put_cstring(&b, "ssh-userauth");
+    pamsshagentauth_buffer_put_cstring(&b, "publickey");
+    pamsshagentauth_buffer_put_char(&b, 1);
+    pamsshagentauth_buffer_put_cstring(&b, pkalg);
+    pamsshagentauth_buffer_put_string(&b, pkblob, blen);
 
-    if(ssh_agent_sign(id->ac, id->key, &sig, &slen, buffer_ptr(&b), buffer_len(&b)) != 0)
+    if(ssh_agent_sign(id->ac, id->key, &sig, &slen, pamsshagentauth_buffer_ptr(&b), pamsshagentauth_buffer_len(&b)) != 0)
         goto user_auth_clean_exit;
 
     /* test for correct signature */
-    if(key_verify(id->key, sig, slen, buffer_ptr(&b), buffer_len(&b)) == 1)
+    if(pamsshagentauth_key_verify(id->key, sig, slen, pamsshagentauth_buffer_ptr(&b), pamsshagentauth_buffer_len(&b)) == 1)
         authenticated = 1;
 
   user_auth_clean_exit:
     if(&b != NULL)
-        buffer_free(&b);
+        pamsshagentauth_buffer_free(&b);
     if(sig != NULL)
-        xfree(sig);
+        pamsshagentauth_xfree(sig);
     if(pkblob != NULL)
-        xfree(pkblob);
+        pamsshagentauth_xfree(pkblob);
     CRYPTO_cleanup_all_ex_data();
     return authenticated;
 }

@@ -46,20 +46,20 @@ typedef enum {
 	SYSLOG_LEVEL_NOT_SET = -1
 }       LogLevel;
 
-void     log_init(char *, LogLevel, SyslogFacility, int);
+void     pamsshagentauth_log_init(char *, LogLevel, SyslogFacility, int);
 
-SyslogFacility	log_facility_number(char *);
-LogLevel log_level_number(char *);
+SyslogFacility	pamsshagentauth_log_facility_number(char *);
+LogLevel pamsshagentauth_log_level_number(char *);
 
-void     fatal(const char *, ...) __dead __attribute__((format(printf, 1, 2)));
-void     logerror(const char *, ...) __attribute__((format(printf, 1, 2)));
-void     sigdie(const char *, ...) __attribute__((format(printf, 1, 2)));
-void     logit(const char *, ...) __attribute__((format(printf, 1, 2)));
-void     verbose(const char *, ...) __attribute__((format(printf, 1, 2)));
-void     debug(const char *, ...) __attribute__((format(printf, 1, 2)));
-void     debug2(const char *, ...) __attribute__((format(printf, 1, 2)));
-void     debug3(const char *, ...) __attribute__((format(printf, 1, 2)));
+void     pamsshagentauth_fatal(const char *, ...) __dead __attribute__((format(printf, 1, 2)));
+void     pamsshagentauth_logerror(const char *, ...) __attribute__((format(printf, 1, 2)));
+void     pamsshagentauth_sigdie(const char *, ...) __attribute__((format(printf, 1, 2)));
+void     pamsshagentauth_logit(const char *, ...) __attribute__((format(printf, 1, 2)));
+void     pamsshagentauth_verbose(const char *, ...) __attribute__((format(printf, 1, 2)));
+void     pamsshagentauth_debug(const char *, ...) __attribute__((format(printf, 1, 2)));
+void     pamsshagentauth_debug2(const char *, ...) __attribute__((format(printf, 1, 2)));
+void     pamsshagentauth_debug3(const char *, ...) __attribute__((format(printf, 1, 2)));
 
-void	 do_log(LogLevel, const char *, va_list);
-void	 cleanup_exit(int) __dead;
+void	 pamsshagentauth_do_log(LogLevel, const char *, va_list);
+void	 pamsshagentauth_cleanup_exit(int) __dead;
 #endif
