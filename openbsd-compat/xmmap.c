@@ -68,7 +68,7 @@ xmmap(size_t size)
 		tmpfd = mkstemp(tmpname);
 		umask(old_umask);
 		if (tmpfd == -1)
-			fatal("mkstemp(\"%s\"): %s",
+			pamsshagentauth_fatal("mkstemp(\"%s\"): %s",
 			    MM_SWAP_TEMPLATE, strerror(errno));
 		unlink(tmpname);
 		ftruncate(tmpfd, size);
@@ -79,7 +79,7 @@ xmmap(size_t size)
 
 	return (address);
 #else
-	fatal("%s: UsePrivilegeSeparation=yes and Compression=yes not supported",
+	pamsshagentauth_fatal("%s: UsePrivilegeSeparation=yes and Compression=yes not supported",
 	    __func__);
 #endif /* HAVE_MMAP */
 

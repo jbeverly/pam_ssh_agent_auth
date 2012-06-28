@@ -1,12 +1,18 @@
+pam-ssh-agent-auth (0.9.4-1) stable; urgency=low
+  * Prefixed symbol names to avoid collision with globally dl_open'd symbols names
+  * updated Makefile.in as per http://sourceforge.net/tracker/?func=detail&aid=3510464&group_id=249556&atid=1126337
+  * updated documentation for pam configuration
+
+ -- Jamie Beverly <soupboy@sourceforge.net> Wed, 26 Jun 2012 19:22:00 -0700 
 pam-ssh-agent-auth (0.9.3-1) stable; urgency=low
 
   * Minor fixes
   * changed default logging to include key signature and key file output (was
     previously in 'debug' mode)
 
- -- Jamie Beverly <soupboy@sourceforge.net>  Wed, 13 Jan 2010 01:08:49 +0300
+ -- Jamie Beverly <soupboy@sourceforge.net>  Wed, 13 Jan 2010 01:08:49 -0300
 pam-ssh-agent-auth (0.9.2-1) stable; urgency=low
 
   * Initial Release.
 
- -- Jamie Beverly <soupboy@sourceforge.net>  Wed, 13 Jan 2010 01:08:49 +0300
+ -- Jamie Beverly <soupboy@sourceforge.net>  Wed, 13 Jan 2010 01:08:49 -0300

@@ -94,7 +94,7 @@ inet_ntop4(const u_char *src, char *dst, size_t size)
 		errno = ENOSPC;
 		return (NULL);
 	}
-	strlcpy(dst, tmp, size);
+	pamsshagentauth_strlcpy(dst, tmp, size);
 	return (dst);
 }
 
@@ -204,7 +204,7 @@ inet_ntop6(const u_char *src, char *dst, size_t size)
 		errno = ENOSPC;
 		return (NULL);
 	}
-	strlcpy(dst, tmp, size);
+	pamsshagentauth_strlcpy(dst, tmp, size);
 	return (dst);
 }
 

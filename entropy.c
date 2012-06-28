@@ -68,7 +68,7 @@ static uid_t original_uid, original_euid;
 #endif
 
 void
-seed_rng(void)
+pamsshagentauth_seed_rng(void)
 {
 #ifndef OPENSSL_PRNG_ONLY
 	int devnull;
@@ -79,20 +79,20 @@ seed_rng(void)
 	mysig_t old_sigchld;
 
 	if (RAND_status() == 1) {
-		verbose("RNG is ready, skipping seeding");
+		pamsshagentauth_verbose("RNG is ready, skipping seeding");
 		return;
 	}
 
-	verbose("Seeding PRNG from %s", SSH_RAND_HELPER);
+	pamsshagentauth_verbose("Seeding PRNG from %s", SSH_RAND_HELPER);
 
 	if ((devnull = open("/dev/null", O_RDWR)) == -1)
-		fatal("Couldn't open /dev/null: %s", strerror(errno));
+		pamsshagentauth_fatal("Couldn't open /dev/null: %s", strerror(errno));
 	if (pipe(p) == -1)
-		fatal("pipe: %s", strerror(errno));
+		pamsshagentauth_fatal("pipe: %s", strerror(errno));
 
 	old_sigchld = signal(SIGCHLD, SIG_DFL);
 	if ((pid = fork()) == -1)
-		fatal("Couldn't fork: %s", strerror(errno));
+		pamsshagentauth_fatal("Couldn't fork: %s", strerror(errno));
 	if (pid == 0) {
 		dup2(devnull, STDIN_FILENO);
 		dup2(p[1], STDOUT_FILENO);
@@ -119,44 +119,44 @@ seed_rng(void)
 	close(p[1]);
 
 	memset(buf, '\0', sizeof(buf));
-	ret = atomicio(read, p[0], buf, sizeof(buf));
+	ret = pamsshagentauth_atomicio(read, p[0], buf, sizeof(buf));
 	if (ret == -1)
-		fatal("Couldn't read from ssh-rand-helper: %s",
+		pamsshagentauth_fatal("Couldn't read from ssh-rand-helper: %s",
 		    strerror(errno));
 	if (ret != sizeof(buf))
-		fatal("ssh-rand-helper child produced insufficient data");
+		pamsshagentauth_fatal("ssh-rand-helper child produced insufficient data");
 
 	close(p[0]);
 
 	if (waitpid(pid, &ret, 0) == -1)
-		fatal("Couldn't wait for ssh-rand-helper completion: %s",
+		pamsshagentauth_fatal("Couldn't wait for ssh-rand-helper completion: %s",
 		    strerror(errno));
 	signal(SIGCHLD, old_sigchld);
 
 	/* We don't mind if the child exits upon a SIGPIPE */
 	if (!WIFEXITED(ret) &&
 	    (!WIFSIGNALED(ret) || WTERMSIG(ret) != SIGPIPE))
-		fatal("ssh-rand-helper terminated abnormally");
+		pamsshagentauth_fatal("ssh-rand-helper terminated abnormally");
 	if (WEXITSTATUS(ret) != 0)
-		fatal("ssh-rand-helper exit with exit status %d", ret);
+		pamsshagentauth_fatal("ssh-rand-helper exit with exit status %d", ret);
 
 	RAND_add(buf, sizeof(buf), sizeof(buf));
 	memset(buf, '\0', sizeof(buf));
 
 #endif /* OPENSSL_PRNG_ONLY */
 	if (RAND_status() != 1)
-		fatal("PRNG is not seeded");
+		pamsshagentauth_fatal("PRNG is not seeded");
 }
 
 void
-init_rng(void)
+pamsshagentauth_init_rng(void)
 {
 	/*
 	 * OpenSSL version numbers: MNNFFPPS: major minor fix patch status
 	 * We match major, minor, fix and status (not patch)
 	 */
 	if ((SSLeay() ^ OPENSSL_VERSION_NUMBER) & ~0xff0L)
-		fatal("OpenSSL version mismatch. Built against %lx, you "
+		pamsshagentauth_fatal("OpenSSL version mismatch. Built against %lx, you "
 		    "have %lx", OPENSSL_VERSION_NUMBER, SSLeay());
 
 #ifndef OPENSSL_PRNG_ONLY
@@ -172,11 +172,11 @@ rexec_send_rng_seed(Buffer *m)
 	u_char buf[RANDOM_SEED_SIZE];
 
 	if (RAND_bytes(buf, sizeof(buf)) <= 0) {
-		logerror("Couldn't obtain random bytes (error %ld)",
+		pamsshagentauth_logerror("Couldn't obtain random bytes (error %ld)",
 		    ERR_get_error());
-		buffer_put_string(m, "", 0);
+		pamsshagentauth_buffer_put_string(m, "", 0);
 	} else 
-		buffer_put_string(m, buf, sizeof(buf));
+		pamsshagentauth_buffer_put_string(m, buf, sizeof(buf));
 }
 
 void
@@ -185,9 +185,9 @@ rexec_recv_rng_seed(Buffer *m)
 	u_char *buf;
 	u_int len;
 
-	buf = buffer_get_string_ret(m, &len);
+	buf = pamsshagentauth_buffer_get_string_ret(m, &len);
 	if (buf != NULL) {
-		verbose("rexec_recv_rng_seed: seeding rng with %u bytes", len);
+		pamsshagentauth_verbose("rexec_recv_rng_seed: seeding rng with %u bytes", len);
 		RAND_add(buf, len, len);
 	}
 }

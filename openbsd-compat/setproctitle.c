@@ -133,11 +133,11 @@ setproctitle(const char *fmt, ...)
 		return;
 #endif
 
-	strlcpy(buf, __progname, sizeof(buf));
+	pamsshagentauth_strlcpy(buf, __progname, sizeof(buf));
 
 	va_start(ap, fmt);
 	if (fmt != NULL) {
-		len = strlcat(buf, ": ", sizeof(buf));
+		len = pamsshagentauth_strlcat(buf, ": ", sizeof(buf));
 		if (len < sizeof(buf))
 			vsnprintf(buf + len, sizeof(buf) - len , fmt, ap);
 	}
@@ -147,9 +147,9 @@ setproctitle(const char *fmt, ...)
 	pst.pst_command = buf;
 	pstat(PSTAT_SETCMD, pst, strlen(buf), 0, 0);
 #elif SPT_TYPE == SPT_REUSEARGV
-/*	verbose("setproctitle: copy \"%s\" into len %d", 
+/*	pamsshagentauth_verbose("setproctitle: copy \"%s\" into len %d", 
 	    buf, argv_env_len); */
-	len = strlcpy(argv_start, buf, argv_env_len);
+	len = pamsshagentauth_strlcpy(argv_start, buf, argv_env_len);
 	for(; len < argv_env_len; len++)
 		argv_start[len] = SPT_PADCHAR;
 #endif

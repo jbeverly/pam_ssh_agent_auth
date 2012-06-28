@@ -71,7 +71,7 @@
  * Returns 0 on success and -1 on failure
  */
 int
-secure_filename(FILE *f, const char *file, struct passwd *pw,
+pamsshagentauth_secure_filename(FILE *f, const char *file, struct passwd *pw,
     char *err, size_t errlen)
 {
 	uid_t uid = pw->pw_uid;
@@ -80,7 +80,7 @@ secure_filename(FILE *f, const char *file, struct passwd *pw,
 	int comparehome = 0;
 	struct stat st;
 
-    verbose("secure_filename: checking for uid: %u", uid);
+    pamsshagentauth_verbose("secure_filename: checking for uid: %u", uid);
 
 	if (realpath(file, buf) == NULL) {
 		snprintf(err, errlen, "realpath %s failed: %s", file,
@@ -105,9 +105,9 @@ secure_filename(FILE *f, const char *file, struct passwd *pw,
 			snprintf(err, errlen, "dirname() failed");
 			return -1;
 		}
-		strlcpy(buf, cp, sizeof(buf));
+		pamsshagentauth_strlcpy(buf, cp, sizeof(buf));
 
-		verbose("secure_filename: checking '%s'", buf);
+		pamsshagentauth_verbose("secure_filename: checking '%s'", buf);
 		if (stat(buf, &st) < 0 ||
 		    (st.st_uid != 0 && st.st_uid != uid) ||
 		    (st.st_mode & 022) != 0) {
@@ -118,7 +118,7 @@ secure_filename(FILE *f, const char *file, struct passwd *pw,
 
 		/* If are passed the homedir then we can stop */
 		if (comparehome && strcmp(homedir, buf) == 0) {
-			verbose("secure_filename: terminating check at '%s'",
+			pamsshagentauth_verbose("secure_filename: terminating check at '%s'",
 			    buf);
 			break;
 		}

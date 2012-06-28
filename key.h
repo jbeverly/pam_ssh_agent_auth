@@ -55,29 +55,29 @@ struct Key {
 	DSA	*dsa;
 };
 
-Key		*key_new(int);
-Key		*key_new_private(int);
-void		 key_free(Key *);
-Key		*key_demote(const Key *);
-int		 key_equal(const Key *, const Key *);
-char		*key_fingerprint(const Key *, enum fp_type, enum fp_rep);
-u_char		*key_fingerprint_raw(const Key *, enum fp_type, u_int *);
-const char	*key_type(const Key *);
-int		 key_write(const Key *, FILE *);
-int		 key_read(Key *, char **);
-u_int		 key_size(const Key *);
+Key		*pamsshagentauth_key_new(int);
+Key		*pamsshagentauth_key_new_private(int);
+void		 pamsshagentauth_key_free(Key *);
+Key		*pamsshagentauth_key_demote(const Key *);
+int		 pamsshagentauth_key_equal(const Key *, const Key *);
+char		*pamsshagentauth_key_fingerprint(const Key *, enum fp_type, enum fp_rep);
+u_char		*pamsshagentauth_key_fingerprint_raw(const Key *, enum fp_type, u_int *);
+const char	*pamsshagentauth_key_type(const Key *);
+int		 pamsshagentauth_key_write(const Key *, FILE *);
+int		 pamsshagentauth_key_read(Key *, char **);
+u_int		 pamsshagentauth_key_size(const Key *);
 
-Key	*key_generate(int, u_int);
-Key	*key_from_private(const Key *);
-int	 key_type_from_name(char *);
+Key	*pamsshagentauth_key_generate(int, u_int);
+Key	*pamsshagentauth_key_from_private(const Key *);
+int	 pamsshagentauth_key_type_from_name(char *);
 
-Key		*key_from_blob(const u_char *, u_int);
-int		 key_to_blob(const Key *, u_char **, u_int *);
+Key		*pamsshagentauth_key_from_blob(const u_char *, u_int);
+int		 pamsshagentauth_key_to_blob(const Key *, u_char **, u_int *);
 const char	*key_ssh_name(const Key *);
-int		 key_names_valid2(const char *);
+int		 pamsshagentauth_key_names_valid2(const char *);
 
-int	 key_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
-int	 key_verify(const Key *, const u_char *, u_int, const u_char *, u_int);
+int	 pamsshagentauth_key_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
+int	 pamsshagentauth_key_verify(const Key *, const u_char *, u_int, const u_char *, u_int);
 
 int	 ssh_dss_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
 int	 ssh_dss_verify(const Key *, const u_char *, u_int, const u_char *, u_int);

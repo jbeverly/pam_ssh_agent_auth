@@ -76,15 +76,15 @@ aix_usrinfo(struct passwd *pw)
 	char *cp;
 
 	len = sizeof("LOGNAME= NAME= ") + (2 * strlen(pw->pw_name));
-	cp = xmalloc(len);
+	cp = pamsshagentauth_xmalloc(len);
 
 	i = snprintf(cp, len, "LOGNAME=%s%cNAME=%s%c", pw->pw_name, '\0',
 	    pw->pw_name, '\0');
 	if (usrinfo(SETUINFO, cp, i) == -1)
-		fatal("Couldn't set usrinfo: %s", strerror(errno));
-	verbose("AIX/UsrInfo: set len %d", i);
+		pamsshagentauth_fatal("Couldn't set usrinfo: %s", strerror(errno));
+	pamsshagentauth_verbose("AIX/UsrInfo: set len %d", i);
 
-	xfree(cp);
+	pamsshagentauth_xfree(cp);
 }
 
 # ifdef WITH_AIXAUTHENTICATE
@@ -131,17 +131,17 @@ aix_valid_authentications(const char *user)
 	int valid = 1;
 
 	if (getuserattr((char *)user, S_AUTHSYSTEM, &sys, SEC_CHAR) != 0) {
-		logit("Can't retrieve attribute SYSTEM for %s: %.100s",
+		pamsshagentauth_logit("Can't retrieve attribute SYSTEM for %s: %.100s",
 		    user, strerror(errno));
 		return 0;
 	}
 
-	verbose("AIX SYSTEM attribute %s", sys);
+	pamsshagentauth_verbose("AIX SYSTEM attribute %s", sys);
 	if (strcmp(sys, "NONE") != 0)
 		return 1;	/* not "NONE", so is OK */
 
 	if (getuserattr((char *)user, S_AUTH1, &auth1, SEC_LIST) != 0) {
-		logit("Can't retrieve attribute auth1 for %s: %.100s",
+		pamsshagentauth_logit("Can't retrieve attribute auth1 for %s: %.100s",
 		    user, strerror(errno));
 		return 0;
 	}
@@ -149,9 +149,9 @@ aix_valid_authentications(const char *user)
 	p = auth1;
 	/* A SEC_LIST is concatenated strings, ending with two NULs. */
 	while (p[0] != '\0' && p[1] != '\0') {
-		verbose("AIX auth1 attribute list member %s", p);
+		pamsshagentauth_verbose("AIX auth1 attribute list member %s", p);
 		if (strcmp(p, "NONE") != 0 && strcmp(p, "SYSTEM")) {
-			logit("Account %s has unsupported auth1 value '%s'",
+			pamsshagentauth_logit("Account %s has unsupported auth1 value '%s'",
 			    user, p);
 			valid = 0;
 		}
@@ -178,7 +178,7 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 		result = authenticate((char *)name, (char *)password, &reenter,
 		    &authmsg);
 		aix_remove_embedded_newlines(authmsg);	
-		verbose("AIX/authenticate result %d, authmsg %.100s", result,
+		pamsshagentauth_verbose("AIX/authenticate result %d, authmsg %.100s", result,
 		    authmsg);
 	} while (reenter);
 
@@ -199,10 +199,10 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 		 */
 		expired = passwdexpired(name, &msg);
 		if (msg && *msg) {
-			buffer_append(ctxt->loginmsg, msg, strlen(msg));
+			pamsshagentauth_buffer_append(ctxt->loginmsg, msg, strlen(msg));
 			aix_remove_embedded_newlines(msg);
 		}
-		verbose("AIX/passwdexpired returned %d msg %.100s", expired, msg);
+		pamsshagentauth_verbose("AIX/passwdexpired returned %d msg %.100s", expired, msg);
 
 		switch (expired) {
 		case 0: /* password not expired */
@@ -211,10 +211,10 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 			ctxt->force_pwchange = 1;
 			break;
 		default: /* user can't change(2) or other error (-1) */
-			logit("Password can't be changed for user %s: %.100s",
+			pamsshagentauth_logit("Password can't be changed for user %s: %.100s",
 			    name, msg);
 			if (msg)
-				xfree(msg);
+				pamsshagentauth_xfree(msg);
 			authsuccess = 0;
 		}
 
@@ -222,7 +222,7 @@ sys_auth_passwd(Authctxt *ctxt, const char *password)
 	}
 
 	if (authmsg != NULL)
-		xfree(authmsg);
+		pamsshagentauth_xfree(authmsg);
 
 	return authsuccess;
 }
@@ -244,7 +244,7 @@ sys_auth_allowed_user(struct passwd *pw, Buffer *loginmsg)
 	 * loginrestrictions will always fail due to insufficient privilege).
 	 */
 	if (pw->pw_uid == 0 || geteuid() != 0) {
-		verbose("%s: not checking", __func__);
+		pamsshagentauth_verbose("%s: not checking", __func__);
 		return 1;
 	}
 
@@ -259,15 +259,15 @@ sys_auth_allowed_user(struct passwd *pw, Buffer *loginmsg)
 	if (result == -1 && errno == EPERM && stat(_PATH_NOLOGIN, &st) == 0)
 		permitted = 1;
 	else if (msg != NULL)
-		buffer_append(loginmsg, msg, strlen(msg));
+		pamsshagentauth_buffer_append(loginmsg, msg, strlen(msg));
 	if (msg == NULL)
-		msg = xstrdup("(none)");
+		msg = pamsshagentauth_xstrdup("(none)");
 	aix_remove_embedded_newlines(msg);
-	verbose("AIX/loginrestrictions returned %d msg %.100s", result, msg);
+	pamsshagentauth_verbose("AIX/loginrestrictions returned %d msg %.100s", result, msg);
 
 	if (!permitted)
-		logit("Login restricted for %s: %.100s", pw->pw_name, msg);
-	xfree(msg);
+		pamsshagentauth_logit("Login restricted for %s: %.100s", pw->pw_name, msg);
+	pamsshagentauth_xfree(msg);
 	return permitted;
 }
 
@@ -283,9 +283,9 @@ sys_auth_record_login(const char *user, const char *host, const char *ttynm,
 	if (loginsuccess((char *)user, (char *)host, (char *)ttynm, &msg) == 0) {
 		success = 1;
 		if (msg != NULL && loginmsg != NULL && !msg_done) {
-			verbose("AIX/loginsuccess: msg %s", msg);
-			buffer_append(loginmsg, msg, strlen(msg));
-			xfree(msg);
+			pamsshagentauth_verbose("AIX/loginsuccess: msg %s", msg);
+			pamsshagentauth_buffer_append(loginmsg, msg, strlen(msg));
+			pamsshagentauth_xfree(msg);
 			msg_done = 1;
 		}
 	}
@@ -327,18 +327,18 @@ aix_setauthdb(const char *user)
 	char *registry;
 
 	if (setuserdb(S_READ) == -1) {
-		verbose("%s: Could not open userdb to read", __func__);
+		pamsshagentauth_verbose("%s: Could not open userdb to read", __func__);
 		return;
 	}
 	
 	if (getuserattr((char *)user, S_REGISTRY, &registry, SEC_CHAR) == 0) {
 		if (setauthdb(registry, old_registry) == 0)
-			verbose("AIX/setauthdb set registry '%s'", registry);
+			pamsshagentauth_verbose("AIX/setauthdb set registry '%s'", registry);
 		else 
-			verbose("AIX/setauthdb set registry '%s' failed: %s",
+			pamsshagentauth_verbose("AIX/setauthdb set registry '%s' failed: %s",
 			    registry, strerror(errno));
 	} else
-		verbose("%s: Could not read S_REGISTRY for user: %s", __func__,
+		pamsshagentauth_verbose("%s: Could not read S_REGISTRY for user: %s", __func__,
 		    strerror(errno));
 	enduserdb();
 #  endif /* HAVE_SETAUTHDB */
@@ -355,10 +355,10 @@ aix_restoreauthdb(void)
 {
 #  ifdef HAVE_SETAUTHDB
 	if (setauthdb(old_registry, NULL) == 0)
-		verbose("%s: restoring old registry '%s'", __func__,
+		pamsshagentauth_verbose("%s: restoring old registry '%s'", __func__,
 		    old_registry);
 	else
-		verbose("%s: failed to restore old registry %s", __func__,
+		pamsshagentauth_verbose("%s: failed to restore old registry %s", __func__,
 		    old_registry);
 #  endif /* HAVE_SETAUTHDB */
 }
@@ -385,7 +385,7 @@ sshaix_getnameinfo(const struct sockaddr *sa, size_t salen, char *host,
 		a6 = sa6->sin6_addr.u6_addr.u6_addr32;
 
 		if (a6[0] == 0 && a6[1] == 0 && a6[2] == 0 && a6[3] == 0) {
-			strlcpy(host, "::", hostlen);
+			pamsshagentauth_strlcpy(host, "::", hostlen);
 			snprintf(serv, servlen, "%d", sa6->sin6_port);
 			return 0;
 		}

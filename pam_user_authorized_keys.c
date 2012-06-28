@@ -109,19 +109,19 @@ parse_authorized_key_file(const char *user, const char *authorized_keys_file_inp
         else {
             slash_ptr = strchr(auth_keys_file_buf,'/');
             if(!slash_ptr)
-                fatal("cannot expand tilde in path without a `/'");
+                pamsshagentauth_fatal("cannot expand tilde in path without a `/'");
 
             owner_uname_len = slash_ptr - auth_keys_file_buf - 1;
             if(owner_uname_len > (sizeof(owner_uname) - 1) ) 
-                fatal("Username too long");
+                pamsshagentauth_fatal("Username too long");
 
             strncat(owner_uname, auth_keys_file_buf + 1, owner_uname_len);
             if(!authorized_keys_file_allowed_owner_uid)
                 authorized_keys_file_allowed_owner_uid = getpwnam(owner_uname)->pw_uid;
         }
-        authorized_keys_file = tilde_expand_filename(auth_keys_file_buf, authorized_keys_file_allowed_owner_uid);
+        authorized_keys_file = pamsshagentauth_tilde_expand_filename(auth_keys_file_buf, authorized_keys_file_allowed_owner_uid);
         strncpy(auth_keys_file_buf, authorized_keys_file, sizeof(auth_keys_file_buf) - 1 );
-        xfree(authorized_keys_file) /* when we percent_expand later, we'd step on this, so free it immediately */;
+        pamsshagentauth_xfree(authorized_keys_file) /* when we percent_expand later, we'd step on this, so free it immediately */;
     }
 
     if(strstr(auth_keys_file_buf, "%h")) {
@@ -133,7 +133,7 @@ parse_authorized_key_file(const char *user, const char *authorized_keys_file_inp
     gethostname(fqdn, HOST_NAME_MAX);
     strncat(hostname, fqdn, strcspn(fqdn,"."));
 #endif
-    authorized_keys_file = percent_expand(auth_keys_file_buf, "h", getpwnam(user)->pw_dir, "H", hostname, "f", fqdn, "u", user, NULL);
+    authorized_keys_file = pamsshagentauth_percent_expand(auth_keys_file_buf, "h", getpwnam(user)->pw_dir, "H", hostname, "f", fqdn, "u", user, NULL);
 }
 
 int

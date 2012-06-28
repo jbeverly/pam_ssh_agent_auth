@@ -16,11 +16,11 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
-void	*xmalloc(size_t);
-void	*xcalloc(size_t, size_t);
-void	*xrealloc(void *, size_t, size_t);
-void     xfree(void *);
-char	*xstrdup(const char *);
-int	 xasprintf(char **, const char *, ...)
+void	*pamsshagentauth_xmalloc(size_t);
+void	*pamsshagentauth_xcalloc(size_t, size_t);
+void	*pamsshagentauth_xrealloc(void *, size_t, size_t);
+void     pamsshagentauth_xfree(void *);
+char	*pamsshagentauth_xstrdup(const char *);
+int	 pamsshagentauth_xasprintf(char **, const char *, ...)
                 __attribute__((__format__ (printf, 2, 3)))
                 __attribute__((__nonnull__ (2)));

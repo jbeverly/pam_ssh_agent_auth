@@ -1,14 +1,14 @@
 # New ports collection makefile for: pam_ssh_agent_auth
 # Date created:        18 January 2009
-# Whom:                Jamie BEverly
+# Whom:                Jamie Beverly
 #
 # $FreeBSD$
 #
 
 PORTNAME       = pam_ssh_agent_auth
-PORTVERSION    = 0.9.3
+PORTVERSION    = 0.9.4
 CATEGORIES     = security
-MASTER_SITES   = http://downloads.sourceforge.net/pamsshagentauth/pam_ssh_agent_auth-0.9.3.tar.bz2
+MASTER_SITES   = http://downloads.sourceforge.net/pamsshagentauth/pam_ssh_agent_auth-0.9.4.tar.bz2
 EXTRACT_SUFX   = .tar.bz2
 WRKSRC         = ${WRKDIR}/$(PORTNAME)
 
