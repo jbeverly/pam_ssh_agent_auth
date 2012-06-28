@@ -7,7 +7,7 @@ Group: System Environment Base
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-%(id -un)-root
 Source0: http://downloads.sourceforge.net/pamsshagentauth/%{name}-%{version}.tar.bz2
 Requires: openssl >= 0.9.8, pam, openssh-server, openssh
-BuildRequires: openssl-devel >= 0.9.8, pam-devel, perl, sed, selinux-devel
+BuildRequires: openssl-devel >= 0.9.8, pam-devel, perl, sed, libselinux-devel
 Vendor: Jamie Beverly
 Packager: Jamie Beverly
 
