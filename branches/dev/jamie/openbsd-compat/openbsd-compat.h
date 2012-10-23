@@ -179,6 +179,8 @@ long long strtoll(const char *, char **, int);
 
 #ifndef HAVE_STRTONUM
 long long pamsshagentauth_strtonum(const char *, long long, long long, const char **);
+#else
+#define pamsshagentauth_strtonum strtonum
 #endif
 
 #if !defined(HAVE_VASPRINTF) || !defined(HAVE_VSNPRINTF)
