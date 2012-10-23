@@ -484,7 +484,7 @@ int main(void) { exit(0); }
 	AC_DEFINE(BROKEN_SETREGID)
 	;;
 *-*-darwin*)
-	AC_DEFINE(HAVE_BUNDLE, [], [ Define on a.out platforms which use bundles in lieu of loadable shared objects ] )
+	AC_DEFINE(HAVE_BUNDLE)
 	AC_MSG_CHECKING(if we have working getaddrinfo)
 	AC_TRY_RUN([#include <mach-o/dyld.h>
 main() { if (NSVersionOfRunTimeLibrary("System") >= (60 << 16))
