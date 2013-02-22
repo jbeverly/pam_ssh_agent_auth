@@ -1,0 +1,20 @@
+Source: pam-ssh-agent-auth
+Priority: extra
+Maintainer: Jamie Beverly <soupboy@sourceforge.net>
+Build-Depends: debhelper (>= 7), autotools-dev, libssl-dev, libpam0g-dev
+Standards-Version: 3.8.0
+Section: libs
+Homepage: http://pamsshagentauth.sf.net/
+
+Package: pam-ssh-agent-auth
+Section: admin
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: PAM Authentication via forwarded ssh-agent
+ pam_ssh_agent_auth is a PAM module which permits PAM authentication via your
+ keyring in a forwarded ssh-agent.
+ This module can be used to provide authentication for anything run locally that
+ supports PAM. It was written specifically with the intention of permitting
+ authentication for sudo without password entry, and also has been proven useful
+ for use with su as an alternative to wheel.
+
