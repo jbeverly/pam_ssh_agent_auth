@@ -6,9 +6,9 @@
 #
 
 PORTNAME       = pam_ssh_agent_auth
-PORTVERSION    = 0.9.4
+PORTVERSION    = 0.9.5
 CATEGORIES     = security
-MASTER_SITES   = http://downloads.sourceforge.net/pamsshagentauth/pam_ssh_agent_auth-0.9.4.tar.bz2
+MASTER_SITES   = http://downloads.sourceforge.net/pamsshagentauth/pam_ssh_agent_auth-0.9.5.tar.bz2
 EXTRACT_SUFX   = .tar.bz2
 WRKSRC         = ${WRKDIR}/$(PORTNAME)
 
