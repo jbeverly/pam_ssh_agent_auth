@@ -54,7 +54,7 @@ pamsshagentauth_session_id2_gen()
     uint32_t rnd = 0;
 
     rnd = pamsshagentauth_arc4random();
-    session_id_len = (uint8_t) rnd;
+    session_id_len = ((uint8_t) rnd) + 16;        /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
 
     cookie = calloc(1,session_id_len);
 
