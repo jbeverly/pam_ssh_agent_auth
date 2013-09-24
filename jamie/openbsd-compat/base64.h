@@ -60,9 +60,9 @@ int pamsshagentauth___b64_ntop(u_char const *src, size_t srclength, char *target
 
 #ifndef HAVE___B64_PTON
 # ifndef HAVE_B64_PTON
-int b64_pton(char const *src, u_char *target, size_t targsize);
+int pamsshagentauth___b64_pton(char const *src, u_char *target, size_t targsize);
 # else
-#  define __b64_pton(a,b,c) b64_pton(a,b,c)
+#  define pamsshagentauth___b64_pton(a,b,c) b64_pton(a,b,c)
 # endif /* !HAVE_B64_PTON */
 #else
 # define pamsshagentauth___b64_pton(a,b,c) __b64_pton(a,b,c)

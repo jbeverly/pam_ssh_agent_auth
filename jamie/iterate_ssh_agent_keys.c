@@ -39,26 +39,32 @@
 #include "authfd.h"
 #include <stdio.h>
 #include <openssl/evp.h>
+#include "ssh2.h"
+#include "misc.h"
 
 #include "userauth_pubkey_from_id.h"
 #include "identity.h"
+extern char **environ;
 
-u_char * session_id2 = NULL;
-uint8_t session_id_len = 0;
-
-u_char *
-pamsshagentauth_session_id2_gen()
+void
+pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user, const char * ruser, const char * servicename)
 {
     char *cookie = NULL;
     uint8_t i = 0;
     uint32_t rnd = 0;
+    uint8_t cookie_len;
+    char * action = NULL;
+    char empty[1] = "";
+    char hostname[256] = { 0 };
+    char pwd[1024] = { 0 };
+    time_t ts;
 
     rnd = pamsshagentauth_arc4random();
-    session_id_len = ((uint8_t) rnd) + 16;        /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
+    cookie_len = ((uint8_t) rnd) + 16;                                          /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
 
-    cookie = calloc(1,session_id_len);
+    cookie = calloc(1,cookie_len);
 
-    for (i = 0; i < session_id_len; i++) {
+    for (i = 0; i < cookie_len; i++) {
         if (i % 4 == 0) {
             rnd = pamsshagentauth_arc4random();
         }
@@ -66,23 +72,61 @@ pamsshagentauth_session_id2_gen()
         rnd >>= 8;
     }
 
-    return cookie;
+    /* This obviously only works with sudo; I'd like to find a better alternative */
+    action = getenv("SUDO_COMMAND");
+    if(!action) {
+        action = getenv("PAM_AUTHORIZED_ACTION");
+        if(!action) {
+            action = empty;
+        }
+    }
+
+    gethostname(hostname, sizeof(hostname) - 1);
+    getcwd(pwd, sizeof(pwd) - 1);
+    time(&ts);
+
+    pamsshagentauth_buffer_init(session_id2);
+
+    pamsshagentauth_buffer_put_int(session_id2, PAM_SSH_AGENT_AUTH_REQUESTv1);
+    pamsshagentauth_debug("cookie: %s", pamsshagentauth_tohex(cookie, cookie_len));
+    pamsshagentauth_buffer_put_string(session_id2, cookie, cookie_len);
+    pamsshagentauth_debug("user: %s", user);
+    pamsshagentauth_buffer_put_cstring(session_id2, user);
+    pamsshagentauth_debug("ruser: %s", ruser);
+    pamsshagentauth_buffer_put_cstring(session_id2, ruser);
+    pamsshagentauth_debug("servicename: %s", servicename);
+    pamsshagentauth_buffer_put_cstring(session_id2, servicename);
+    pamsshagentauth_debug("pwd: %s", pwd);
+    pamsshagentauth_buffer_put_cstring(session_id2, pwd);
+    pamsshagentauth_debug("action: %s", action);
+    pamsshagentauth_buffer_put_cstring(session_id2, action);
+    pamsshagentauth_debug("hostname: %s", hostname);
+    pamsshagentauth_buffer_put_cstring(session_id2, hostname);
+    pamsshagentauth_debug("ts: %ld", ts);
+    pamsshagentauth_buffer_put_int64(session_id2, (uint64_t) ts);
+
+    free(cookie);
+    return;
 }
 
 int
-pamsshagentauth_find_authorized_keys(uid_t uid)
+pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, const char * servicename)
 {
+    Buffer session_id2 = { 0 };
     Identity *id;
     Key *key;
     AuthenticationConnection *ac;
     char *comment;
     uint8_t retval = 0;
+    uid_t uid = getpwnam(ruser)->pw_uid;
 
     OpenSSL_add_all_digests();
-    session_id2 = pamsshagentauth_session_id2_gen();
+    pamsshagentauth_session_id2_gen(&session_id2, user, ruser, servicename);
+
+    pamsshagentauth_verbose("command execution: %s (%u)", ruser, uid);
 
     if ((ac = ssh_get_authentication_connection(uid))) {
-        pamsshagentauth_verbose("Contacted ssh-agent of user %s (%u)", getpwuid(uid)->pw_name, uid);
+        pamsshagentauth_verbose("Contacted ssh-agent of user %s (%u)", ruser, uid);
         for (key = ssh_get_first_identity(ac, &comment, 2); key != NULL; key = ssh_get_next_identity(ac, &comment, 2)) 
         {
             if(key != NULL) {
@@ -90,9 +134,10 @@ pamsshagentauth_find_authorized_keys(uid_t uid)
                 id->key = key;
                 id->filename = comment;
                 id->ac = ac;
-                if(userauth_pubkey_from_id(id)) {
+                if(userauth_pubkey_from_id(ruser, id, &session_id2)) {
                     retval = 1;
                 }
+                pamsshagentauth_buffer_free(&session_id2);
                 pamsshagentauth_xfree(id->filename);
                 pamsshagentauth_key_free(id->key);
                 pamsshagentauth_xfree(id);
@@ -105,7 +150,7 @@ pamsshagentauth_find_authorized_keys(uid_t uid)
     else {
         pamsshagentauth_verbose("No ssh-agent could be contacted");
     }
-    pamsshagentauth_xfree(session_id2);
+    /* pamsshagentauth_xfree(session_id2); */
     EVP_cleanup();
     return retval;
 }
