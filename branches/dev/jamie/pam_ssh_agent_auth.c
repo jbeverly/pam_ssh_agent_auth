@@ -182,7 +182,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         /* 
          * this pw_uid is used to validate the SSH_AUTH_SOCK, and so must be the uid of the ruser invoking the program, not the target-user
          */
-        if(pamsshagentauth_find_authorized_keys(getpwnam(ruser)->pw_uid)) {
+        if(pamsshagentauth_find_authorized_keys(user, ruser, servicename)) { /* getpwnam(ruser)->pw_uid)) { */
             pamsshagentauth_logit("Authenticated: `%s' as `%s' using %s", ruser, user, authorized_keys_file);
             retval = PAM_SUCCESS;
         } else {

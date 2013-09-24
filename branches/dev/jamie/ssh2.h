@@ -104,6 +104,7 @@
 #define SSH2_MSG_USERAUTH_FAILURE			51
 #define SSH2_MSG_USERAUTH_SUCCESS			52
 #define SSH2_MSG_USERAUTH_BANNER			53
+#define SSH2_MSG_USERAUTH_TRUST_REQUEST		54
 
 /* user authentication: method specific, can be reused */
 
@@ -157,5 +158,8 @@
 #define SSH2_OPEN_CONNECT_FAILED			2
 #define SSH2_OPEN_UNKNOWN_CHANNEL_TYPE			3
 #define SSH2_OPEN_RESOURCE_SHORTAGE			4
+
+/* Request structure types that can be found in the session-id field of ssh-agent signing requests */
+#define PAM_SSH_AGENT_AUTH_REQUESTv1 101
 
 #define SSH2_EXTENDED_DATA_STDERR			1

@@ -48,11 +48,12 @@
 #include "identity.h"
 #include "pam_user_authorized_keys.h"
 
-extern u_char  *session_id2;
+/* extern u_char  *session_id2;
 extern uint8_t  session_id_len;
+ */
 
 int
-userauth_pubkey_from_id(Identity * id)
+userauth_pubkey_from_id(const char * ruser, Identity * id, Buffer * session_id2)
 {
     Buffer          b = { 0 };
     char           *pkalg = NULL;
@@ -72,10 +73,10 @@ userauth_pubkey_from_id(Identity * id)
     /* construct packet to sign and test */
     pamsshagentauth_buffer_init(&b);
 
-    pamsshagentauth_buffer_put_string(&b, session_id2, session_id_len);
-    pamsshagentauth_buffer_put_char(&b, SSH2_MSG_USERAUTH_REQUEST);
-    pamsshagentauth_buffer_put_cstring(&b, "root");
-    pamsshagentauth_buffer_put_cstring(&b, "ssh-userauth");
+    pamsshagentauth_buffer_put_string(&b, session_id2->buf, session_id2->alloc);
+    pamsshagentauth_buffer_put_char(&b, SSH2_MSG_USERAUTH_TRUST_REQUEST); 
+    pamsshagentauth_buffer_put_cstring(&b, ruser);
+    pamsshagentauth_buffer_put_cstring(&b, "pam_ssh_agent_auth");
     pamsshagentauth_buffer_put_cstring(&b, "publickey");
     pamsshagentauth_buffer_put_char(&b, 1);
     pamsshagentauth_buffer_put_cstring(&b, pkalg);

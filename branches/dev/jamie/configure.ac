@@ -335,6 +335,8 @@ AC_CHECK_HEADERS( \
 	utmp.h \
 	utmpx.h \
 	vis.h \
+	time.h \
+	unistd.h \
 )
 
 # lastlog.h requires sys/time.h to be included first on Solaris
