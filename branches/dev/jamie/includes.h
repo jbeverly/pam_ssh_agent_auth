@@ -18,8 +18,6 @@
 
 #include "config.h"
 
-#define _GNU_SOURCE /* activate extra prototypes for glibc */
-
 #include <sys/types.h>
 #include <sys/socket.h> /* For CMSG_* */
 

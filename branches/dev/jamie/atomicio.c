@@ -91,7 +91,7 @@ pamsshagentauth_atomiciov(ssize_t (*f) (int, const struct iovec *, int), int fd,
 {
 	size_t pos = 0, rem;
 	ssize_t res;
-	struct iovec iov_array[IOV_MAX], *iov = iov_array;
+	struct iovec iov_array[IOV_MAX] = { 0 }, *iov = iov_array;
 	struct pollfd pfd;
 
 	if (iovcnt > IOV_MAX) {

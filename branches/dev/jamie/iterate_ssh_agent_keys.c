@@ -28,6 +28,8 @@
  */
 
 
+#include <string.h>
+
 #include "includes.h"
 #include "config.h"
 
@@ -44,25 +46,59 @@
 
 #include "userauth_pubkey_from_id.h"
 #include "identity.h"
+#include "get_command_line.h"
 extern char **environ;
 
+static char *
+log_action(char ** action, size_t count)
+{
+    size_t i;
+    char *buf = NULL;
+   
+    buf = pamsshagentauth_xcalloc((count * MAX_LEN_PER_CMDLINE_ARG) + (count * 3), sizeof(*buf));
+    for (i = 0; i < count; i++) {
+        strcat(buf, (i > 0) ? " '" : "'");
+        strncat(buf, action[i], MAX_LEN_PER_CMDLINE_ARG);
+        strcat(buf, "'");
+    }
+    return buf;
+}
+
+static char *
+null_action(char ** action, size_t count)
+{
+    size_t i;
+    char *buf = NULL;
+   
+    buf = pamsshagentauth_xcalloc((count * MAX_LEN_PER_CMDLINE_ARG) + count, sizeof(*buf));
+    for (i = 0; i < count; i++) {
+        strncat(buf, action[i], MAX_LEN_PER_CMDLINE_ARG);
+        strcat(buf, "\0");
+    }
+    return buf;
+}
+
+
 void
-pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user, const char * ruser, const char * servicename)
+pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
+                                const char * ruser, const char * servicename)
 {
     char *cookie = NULL;
     uint8_t i = 0;
     uint32_t rnd = 0;
     uint8_t cookie_len;
-    char * action = NULL;
-    char empty[1] = "";
     char hostname[256] = { 0 };
     char pwd[1024] = { 0 };
     time_t ts;
+    char ** reported_argv = NULL;
+    size_t count = 0;
+    char * action_logbuf = NULL;
+    char * action_nullbuf = NULL;
 
     rnd = pamsshagentauth_arc4random();
     cookie_len = ((uint8_t) rnd) + 16;                                          /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
 
-    cookie = calloc(1,cookie_len);
+    cookie = pamsshagentauth_xcalloc(1,cookie_len);
 
     for (i = 0; i < cookie_len; i++) {
         if (i % 4 == 0) {
@@ -72,7 +108,12 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user, const c
         rnd >>= 8;
     }
 
-    /* This obviously only works with sudo; I'd like to find a better alternative */
+    count = pamsshagentauth_get_command_line(&reported_argv);
+    action_logbuf = log_action(reported_argv, count);
+    action_nullbuf = null_action(reported_argv, count);
+    pamsshagentauth_free_command_line(reported_argv, count);
+    
+    /*
     action = getenv("SUDO_COMMAND");
     if(!action) {
         action = getenv("PAM_AUTHORIZED_ACTION");
@@ -80,6 +121,7 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user, const c
             action = empty;
         }
     }
+    */
 
     gethostname(hostname, sizeof(hostname) - 1);
     getcwd(pwd, sizeof(pwd) - 1);
@@ -88,21 +130,23 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user, const c
     pamsshagentauth_buffer_init(session_id2);
 
     pamsshagentauth_buffer_put_int(session_id2, PAM_SSH_AGENT_AUTH_REQUESTv1);
-    pamsshagentauth_debug("cookie: %s", pamsshagentauth_tohex(cookie, cookie_len));
+    pamsshagentauth_debug3("cookie: %s", pamsshagentauth_tohex(cookie, cookie_len));
     pamsshagentauth_buffer_put_string(session_id2, cookie, cookie_len);
-    pamsshagentauth_debug("user: %s", user);
+    pamsshagentauth_debug3("user: %s", user);
     pamsshagentauth_buffer_put_cstring(session_id2, user);
-    pamsshagentauth_debug("ruser: %s", ruser);
+    pamsshagentauth_debug3("ruser: %s", ruser);
     pamsshagentauth_buffer_put_cstring(session_id2, ruser);
-    pamsshagentauth_debug("servicename: %s", servicename);
+    pamsshagentauth_debug3("servicename: %s", servicename);
     pamsshagentauth_buffer_put_cstring(session_id2, servicename);
-    pamsshagentauth_debug("pwd: %s", pwd);
+    pamsshagentauth_debug3("pwd: %s", pwd);
     pamsshagentauth_buffer_put_cstring(session_id2, pwd);
-    pamsshagentauth_debug("action: %s", action);
-    pamsshagentauth_buffer_put_cstring(session_id2, action);
-    pamsshagentauth_debug("hostname: %s", hostname);
+    pamsshagentauth_debug3("action: %s", action_logbuf);
+    pamsshagentauth_buffer_put_cstring(session_id2, action_nullbuf);
+    pamsshagentauth_xfree(action_logbuf);
+    pamsshagentauth_xfree(action_nullbuf);
+    pamsshagentauth_debug3("hostname: %s", hostname);
     pamsshagentauth_buffer_put_cstring(session_id2, hostname);
-    pamsshagentauth_debug("ts: %ld", ts);
+    pamsshagentauth_debug3("ts: %ld", ts);
     pamsshagentauth_buffer_put_int64(session_id2, (uint64_t) ts);
 
     free(cookie);

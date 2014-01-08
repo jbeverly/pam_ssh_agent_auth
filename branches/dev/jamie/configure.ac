@@ -486,7 +486,7 @@ int main(void) { exit(0); }
 	AC_DEFINE(BROKEN_SETREGID)
 	;;
 *-*-darwin*)
-	AC_DEFINE(HAVE_BUNDLE)
+	AC_DEFINE(HAVE_BUNDLE, 1, [Define if your system uses bundles instead of ELF shared objects])
 	AC_MSG_CHECKING(if we have working getaddrinfo)
 	AC_TRY_RUN([#include <mach-o/dyld.h>
 main() { if (NSVersionOfRunTimeLibrary("System") >= (60 << 16))
@@ -960,13 +960,18 @@ int main(int argc, char **argv) {
 	])
 ])
 
+AC_MSG_CHECKING([for /proc/pid/fd directory])
+if test -f "/proc/$$/cmdline" ; then
+	AC_DEFINE(HAVE_PROC_PID_CMDLINE, 1, [Define if you have /proc/<pid>/cmdline])
+	AC_MSG_RESULT(yes)
+else
+	AC_MSG_RESULT(no)
+fi
+
 AC_CHECK_FUNC(getspnam, ,
 	AC_CHECK_LIB(gen, getspnam, LIBS="$LIBS -lgen"))
 AC_SEARCH_LIBS(basename, gen, AC_DEFINE(HAVE_BASENAME, 1,
 	[Define if you have the basename function.]))
-
-
-
 if test "x$withval" != "xno" ; then
 	if test "x$ac_cv_header_security_pam_appl_h" != "xyes" && \
 	   test "x$ac_cv_header_pam_pam_appl_h" != "xyes" ; then
