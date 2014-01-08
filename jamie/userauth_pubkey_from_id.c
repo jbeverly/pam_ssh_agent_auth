@@ -53,7 +53,7 @@ extern uint8_t  session_id_len;
  */
 
 int
-userauth_pubkey_from_id(const char * ruser, Identity * id, Buffer * session_id2)
+userauth_pubkey_from_id(const char *ruser, Identity * id, Buffer * session_id2)
 {
     Buffer          b = { 0 };
     char           *pkalg = NULL;
@@ -64,7 +64,7 @@ userauth_pubkey_from_id(const char * ruser, Identity * id, Buffer * session_id2)
     pkalg = (char *) key_ssh_name(id->key);
 
     /* first test if this key is even allowed */
-    if(! pam_user_key_allowed(id->key))
+    if(! pam_user_key_allowed(ruser, id->key))
         goto user_auth_clean_exit;
 
     if(pamsshagentauth_key_to_blob(id->key, &pkblob, &blen) == 0)

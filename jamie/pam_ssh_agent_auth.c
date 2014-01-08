@@ -62,6 +62,8 @@
 
 char           *authorized_keys_file = NULL;
 uint8_t         allow_user_owned_authorized_keys_file = 0;
+char           *authorized_keys_command = NULL;
+char           *authorized_keys_command_user = NULL;
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
 char           *__progname;
@@ -112,6 +114,12 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         }
         if(strncasecmp_literal(*argv_ptr, "file=") == 0 ) { 
             authorized_keys_file_input = *argv_ptr + sizeof("file=") - 1;
+        }
+        if(strncasecmp_literal(*argv_ptr, "authorized_keys_command=") == 0 ) { 
+            authorized_keys_command = *argv_ptr + sizeof("authorized_keys_command=") - 1;
+        }
+        if(strncasecmp_literal(*argv_ptr, "authorized_keys_command_user=") == 0 ) { 
+            authorized_keys_command_user = *argv_ptr + sizeof("authorized_keys_command_user=") - 1;
         }
 #ifdef ENABLE_SUDO_HACK
         if(strncasecmp_literal(*argv_ptr, "sudo_service_name=") == 0) { 
