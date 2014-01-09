@@ -244,13 +244,21 @@ pamsshagentauth_user_key_command_allowed2(char *authorized_keys_command,
             pamsshagentauth_logerror("%s: dup2: %s", __func__, strerror(errno));
             _exit(1);
         }
-
-        if(setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) != 0) {
+#ifdef HAVE_SETRESGID && !BROKEN_SETRESGID
+        if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) != 0) {
+#else
+        if (setgid(pw->pw_gid) != 0 || setegid(pw->pw_gid) != 0) {
+#endif
             pamsshagentauth_logerror("setresgid %u: %s", (u_int) pw->pw_gid,
                                      strerror(errno));
             _exit(1);
         }
+
+#ifdef HAVE_SETRESUID
         if(setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) != 0) {
+#else
+        if (setuid(pw->pw_uid) != 0 || seteuid(pw->pw_uid) != 0) {
+#endif
             pamsshagentauth_logerror("setresuid %u: %s", (u_int) pw->pw_uid,
                                      strerror(errno));
             _exit(1);

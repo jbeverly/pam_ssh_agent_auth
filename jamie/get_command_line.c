@@ -67,7 +67,7 @@ pamsshagentauth_get_command_line(char *** argv)
     return proc_pid_cmdline(argv);
 #else
     /* No other supported implementations at this time */
-    return 0
+    return 0;
 #endif
 }
 
