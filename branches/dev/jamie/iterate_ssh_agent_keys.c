@@ -54,6 +54,9 @@ log_action(char ** action, size_t count)
 {
     size_t i;
     char *buf = NULL;
+
+    if (count == 0)
+        return NULL;
    
     buf = pamsshagentauth_xcalloc((count * MAX_LEN_PER_CMDLINE_ARG) + (count * 3), sizeof(*buf));
     for (i = 0; i < count; i++) {
@@ -69,6 +72,9 @@ null_action(char ** action, size_t count)
 {
     size_t i;
     char *buf = NULL;
+
+    if (count == 0)
+        return NULL;
    
     buf = pamsshagentauth_xcalloc((count * MAX_LEN_PER_CMDLINE_ARG) + count, sizeof(*buf));
     for (i = 0; i < count; i++) {
@@ -94,6 +100,7 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     size_t count = 0;
     char * action_logbuf = NULL;
     char * action_nullbuf = NULL;
+    uint8_t free_logbuf = 0;
 
     rnd = pamsshagentauth_arc4random();
     cookie_len = ((uint8_t) rnd) + 16;                                          /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
@@ -109,9 +116,16 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     }
 
     count = pamsshagentauth_get_command_line(&reported_argv);
-    action_logbuf = log_action(reported_argv, count);
-    action_nullbuf = null_action(reported_argv, count);
-    pamsshagentauth_free_command_line(reported_argv, count);
+    if (count > 0) { 
+        free_logbuf = 1;
+        action_logbuf = log_action(reported_argv, count);
+        action_nullbuf = null_action(reported_argv, count);
+        pamsshagentauth_free_command_line(reported_argv, count);
+    }
+    else {
+        action_logbuf = "unknown on this platform";
+        action_nullbuf = "unknown on this platform";
+    }
     
     /*
     action = getenv("SUDO_COMMAND");
@@ -130,23 +144,25 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     pamsshagentauth_buffer_init(session_id2);
 
     pamsshagentauth_buffer_put_int(session_id2, PAM_SSH_AGENT_AUTH_REQUESTv1);
-    pamsshagentauth_debug3("cookie: %s", pamsshagentauth_tohex(cookie, cookie_len));
+    /* pamsshagentauth_debug3("cookie: %s", pamsshagentauth_tohex(cookie, cookie_len)); */
     pamsshagentauth_buffer_put_string(session_id2, cookie, cookie_len);
-    pamsshagentauth_debug3("user: %s", user);
+    /* pamsshagentauth_debug3("user: %s", user); */
     pamsshagentauth_buffer_put_cstring(session_id2, user);
-    pamsshagentauth_debug3("ruser: %s", ruser);
+    /* pamsshagentauth_debug3("ruser: %s", ruser); */
     pamsshagentauth_buffer_put_cstring(session_id2, ruser);
-    pamsshagentauth_debug3("servicename: %s", servicename);
+    /* pamsshagentauth_debug3("servicename: %s", servicename); */
     pamsshagentauth_buffer_put_cstring(session_id2, servicename);
-    pamsshagentauth_debug3("pwd: %s", pwd);
+    /* pamsshagentauth_debug3("pwd: %s", pwd); */
     pamsshagentauth_buffer_put_cstring(session_id2, pwd);
-    pamsshagentauth_debug3("action: %s", action_logbuf);
+    /* pamsshagentauth_debug3("action: %s", action_logbuf); */
     pamsshagentauth_buffer_put_cstring(session_id2, action_nullbuf);
-    pamsshagentauth_xfree(action_logbuf);
-    pamsshagentauth_xfree(action_nullbuf);
-    pamsshagentauth_debug3("hostname: %s", hostname);
+    if (free_logbuf) { 
+        pamsshagentauth_xfree(action_logbuf);
+        pamsshagentauth_xfree(action_nullbuf);
+    }
+    /* pamsshagentauth_debug3("hostname: %s", hostname); */
     pamsshagentauth_buffer_put_cstring(session_id2, hostname);
-    pamsshagentauth_debug3("ts: %ld", ts);
+    /* pamsshagentauth_debug3("ts: %ld", ts); */
     pamsshagentauth_buffer_put_int64(session_id2, (uint64_t) ts);
 
     free(cookie);
