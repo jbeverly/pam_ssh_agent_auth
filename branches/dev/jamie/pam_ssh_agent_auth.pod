@@ -33,6 +33,15 @@ Specify the path to the authorized_keys file(s) you would like to use for authen
 A flag which enables authorized_keys files to be owned by the invoking user, instead of root. This flag is enabled automatically whenever
 the expansions %h or ~ are used.
 
+=item authorized_keys_command=<path to executable>
+
+Specify an external command to run, which should take a single argument, the username of the person being authenticated, and emit to its stdout a file in authorized_keys format.
+This is ideally suited for use with sssd's sss_ssh_authorizedkeys, for authenticating users via authorized_keys stored in ldap or other sssd supported security service.
+
+=item authorized_keys_command_user=<username>
+
+Specify a user to run the authorized_keys_command as. If this option is not specified, the authorized_keys_command will be run as the user being authenticated.
+
 =item debug
 
 A flag which enables verbose logging
@@ -113,5 +122,35 @@ and continue from there. This is useful, for instance, if /etc/pam.d/common-auth
 For more information, please see http://linux.die.net/man/5/pam.d
 
 =back
+
+=head1 COPYRIGHT
+
+ Copyright (c) 2008-2014, Jamie Beverly.
+ And is based on openssh, and the included works by Markus Friedl, Darren Tucker,
+ Todd C. Miller, Ben Lindstrom, Tim Rice, Damien Miller, and many others.
+
+ All rights reserved.
+
+ See sources for complete attributions.
+ 
+ Redistribution and use in source and binary forms, with or without modification, are
+ permitted provided that the following conditions are met:
+
+ 1. Redistributions of source code must retain the above copyright notice, this list of
+    conditions and the following disclaimer.
+
+ 2. Redistributions in binary form must reproduce the above copyright notice, this list
+    of conditions and the following disclaimer in the documentation and/or other materials
+    provided with the distribution.
+
+ THIS SOFTWARE IS PROVIDED BY Jamie Beverly ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL Jamie Beverly OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut
