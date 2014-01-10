@@ -1,3 +1,7 @@
+pam-ssh-agent-auth (0.10.1-1) stable; urgency=low
+  * support for authorized_keys_command and authorized_keys_command_user
+
+ -- Jamie Beverly <soupboy@sourceforge.net> Thu, 9 Jan 2014 06:23:00 -0800
 pam-ssh-agent-auth (0.9.6-1) stable; urgency=high
   * Bug that allowed random cookie to be zero length, which could permit replay attacks 
   * Inclusion of additional metadata in session-id of request sent to ssh-agent to permit chain of trust
