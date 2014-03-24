@@ -267,7 +267,7 @@ pamsshagentauth_user_key_command_allowed2(char *authorized_keys_command,
         close(p[0]);
         closefrom(STDERR_FILENO + 1);
 
-        execl(authorized_keys_command, authorized_keys_command, username, NULL);
+        execl(authorized_keys_command, authorized_keys_command, username, (char *)NULL);
 
         /* pretty sure this will barf because we are now suid, but since we
            should't reach this anyway, I'll leave it here */
