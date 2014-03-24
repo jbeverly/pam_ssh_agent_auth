@@ -1,4 +1,4 @@
-/*
+/* 
  * Copyright (c) 2008, Jamie Beverly. 
  * All rights reserved.
  * 
@@ -80,65 +80,90 @@
 #include "identity.h"
 #include "pam_user_key_allowed2.h"
 
-extern char    *authorized_keys_file;
-extern uint8_t  allow_user_owned_authorized_keys_file;
-uid_t           authorized_keys_file_allowed_owner_uid;
+extern char *authorized_keys_file;
+
+extern char *authorized_keys_command;
+
+extern char *authorized_keys_command_user;
+
+extern uint8_t allow_user_owned_authorized_keys_file;
+
+uid_t authorized_keys_file_allowed_owner_uid;
 
 void
-parse_authorized_key_file(const char *user, const char *authorized_keys_file_input)
+parse_authorized_key_file(const char *user,
+                          const char *authorized_keys_file_input)
 {
-    char            fqdn[HOST_NAME_MAX] = "";
-    char            hostname[HOST_NAME_MAX] = "";
-    char            auth_keys_file_buf[4096] = "";
-    char           *slash_ptr = NULL;
-    char            owner_uname[128] = "";
-    size_t          owner_uname_len = 0;
+    char fqdn[HOST_NAME_MAX] = "";
+    char hostname[HOST_NAME_MAX] = "";
+    char auth_keys_file_buf[4096] = "";
+    char *slash_ptr = NULL;
+    char owner_uname[128] = "";
+    size_t owner_uname_len = 0;
 
-    /*
-     * temporary copy, so that both tilde expansion and percent expansion both get to apply to the path
+    /* 
+     * temporary copy, so that both tilde expansion and percent expansion both
+     * get to apply to the path
      */
-    strncat(auth_keys_file_buf, authorized_keys_file_input, sizeof(auth_keys_file_buf) - 1);
+    strncat(auth_keys_file_buf, authorized_keys_file_input,
+            sizeof(auth_keys_file_buf) - 1);
 
     if(allow_user_owned_authorized_keys_file)
         authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
 
     if(*auth_keys_file_buf == '~') {
-        if(*(auth_keys_file_buf+1) == '/') {
+        if(*(auth_keys_file_buf + 1) == '/') {
             authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
-        }
-        else {
-            slash_ptr = strchr(auth_keys_file_buf,'/');
+        } else {
+            slash_ptr = strchr(auth_keys_file_buf, '/');
             if(!slash_ptr)
-                pamsshagentauth_fatal("cannot expand tilde in path without a `/'");
+                pamsshagentauth_fatal
+                    ("cannot expand tilde in path without a `/'");
 
             owner_uname_len = slash_ptr - auth_keys_file_buf - 1;
-            if(owner_uname_len > (sizeof(owner_uname) - 1) ) 
+            if(owner_uname_len > (sizeof(owner_uname) - 1))
                 pamsshagentauth_fatal("Username too long");
 
             strncat(owner_uname, auth_keys_file_buf + 1, owner_uname_len);
             if(!authorized_keys_file_allowed_owner_uid)
-                authorized_keys_file_allowed_owner_uid = getpwnam(owner_uname)->pw_uid;
+                authorized_keys_file_allowed_owner_uid =
+                    getpwnam(owner_uname)->pw_uid;
         }
-        authorized_keys_file = pamsshagentauth_tilde_expand_filename(auth_keys_file_buf, authorized_keys_file_allowed_owner_uid);
-        strncpy(auth_keys_file_buf, authorized_keys_file, sizeof(auth_keys_file_buf) - 1 );
-        pamsshagentauth_xfree(authorized_keys_file) /* when we percent_expand later, we'd step on this, so free it immediately */;
+        authorized_keys_file =
+            pamsshagentauth_tilde_expand_filename(auth_keys_file_buf,
+                                                  authorized_keys_file_allowed_owner_uid);
+        strncpy(auth_keys_file_buf, authorized_keys_file,
+                sizeof(auth_keys_file_buf) - 1);
+        pamsshagentauth_xfree(authorized_keys_file)        /* when we
+                                                              percent_expand
+                                                              later, we'd step
+                                                              on this, so free
+                                                              it immediately */ ;
     }
 
     if(strstr(auth_keys_file_buf, "%h")) {
         authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
     }
-
 #if HAVE_GETHOSTNAME
     *hostname = '\0';
     gethostname(fqdn, HOST_NAME_MAX);
-    strncat(hostname, fqdn, strcspn(fqdn,"."));
+    strncat(hostname, fqdn, strcspn(fqdn, "."));
 #endif
-    authorized_keys_file = pamsshagentauth_percent_expand(auth_keys_file_buf, "h", getpwnam(user)->pw_dir, "H", hostname, "f", fqdn, "u", user, NULL);
+    authorized_keys_file =
+        pamsshagentauth_percent_expand(auth_keys_file_buf, "h",
+                                       getpwnam(user)->pw_dir, "H", hostname,
+                                       "f", fqdn, "u", user, NULL);
 }
 
 int
-pam_user_key_allowed(Key * key)
+pam_user_key_allowed(const char *ruser, Key * key)
 {
-    return pam_user_key_allowed2(getpwuid(authorized_keys_file_allowed_owner_uid), key, authorized_keys_file)
-        || pam_user_key_allowed2(getpwuid(0), key, authorized_keys_file);
+    return
+        pamsshagentauth_user_key_allowed2(getpwuid(authorized_keys_file_allowed_owner_uid),
+                                          key, authorized_keys_file)
+        || pamsshagentauth_user_key_allowed2(getpwuid(0), key,
+                                             authorized_keys_file)
+        || pamsshagentauth_user_key_command_allowed2(authorized_keys_command,
+                                                     authorized_keys_command_user,
+                                                     getpwnam(ruser), key);
 }

@@ -32,6 +32,7 @@
 #define _PAM_USER_KEY_ALLOWED_H
 
 #include "identity.h"
-int pam_user_key_allowed2(struct passwd *, Key *, char *);
+int pamsshagentauth_user_key_allowed2(struct passwd *, Key *, char *);
+int pamsshagentauth_user_key_command_allowed2(char *, char *, struct passwd *, Key *);
 
 #endif

@@ -28,5 +28,7 @@
 #define _SECURE_FILENAME_H
 #include <pwd.h>
 #include <stdio.h>
+struct stat;
 int pamsshagentauth_secure_filename(FILE *, const char *, struct passwd *, char *, size_t);
+int pamsshagentauth_auth_secure_path(const char *, struct stat *, const char *, uid_t, char *, size_t);
 #endif
