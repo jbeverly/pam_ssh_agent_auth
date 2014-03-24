@@ -73,7 +73,7 @@ userauth_pubkey_from_id(const char *ruser, Identity * id, Buffer * session_id2)
     /* construct packet to sign and test */
     pamsshagentauth_buffer_init(&b);
 
-    pamsshagentauth_buffer_put_string(&b, session_id2->buf, session_id2->alloc);
+    pamsshagentauth_buffer_put_string(&b, session_id2->buf + session_id2->offset, session_id2->end - session_id2->offset);
     pamsshagentauth_buffer_put_char(&b, SSH2_MSG_USERAUTH_TRUST_REQUEST); 
     pamsshagentauth_buffer_put_cstring(&b, ruser);
     pamsshagentauth_buffer_put_cstring(&b, "pam_ssh_agent_auth");
@@ -90,8 +90,8 @@ userauth_pubkey_from_id(const char *ruser, Identity * id, Buffer * session_id2)
         authenticated = 1;
 
   user_auth_clean_exit:
-    if(&b != NULL)
-        pamsshagentauth_buffer_free(&b);
+    /* if(&b != NULL) */
+    pamsshagentauth_buffer_free(&b);
     if(sig != NULL)
         pamsshagentauth_xfree(sig);
     if(pkblob != NULL)

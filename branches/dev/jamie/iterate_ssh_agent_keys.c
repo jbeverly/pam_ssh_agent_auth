@@ -67,21 +67,17 @@ log_action(char ** action, size_t count)
     return buf;
 }
 
-static char *
-null_action(char ** action, size_t count)
+void
+agent_action(Buffer *buf, char ** action, size_t count)
 {
     size_t i;
-    char *buf = NULL;
+    pamsshagentauth_buffer_init(buf);
 
-    if (count == 0)
-        return NULL;
-   
-    buf = pamsshagentauth_xcalloc((count * MAX_LEN_PER_CMDLINE_ARG) + count, sizeof(*buf));
+    pamsshagentauth_buffer_put_int(buf, count);
+
     for (i = 0; i < count; i++) {
-        strncat(buf, action[i], MAX_LEN_PER_CMDLINE_ARG);
-        strcat(buf, "\0");
+        pamsshagentauth_buffer_put_cstring(buf, action[i]);
     }
-    return buf;
 }
 
 
@@ -99,11 +95,14 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     char ** reported_argv = NULL;
     size_t count = 0;
     char * action_logbuf = NULL;
-    char * action_nullbuf = NULL;
+    Buffer action_agentbuf;
     uint8_t free_logbuf = 0;
 
     rnd = pamsshagentauth_arc4random();
-    cookie_len = ((uint8_t) rnd) + 16;                                          /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
+    cookie_len = ((uint8_t) rnd);
+    while (cookie_len < 16) { 
+        cookie_len += 16;                                          /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
+    }
 
     cookie = pamsshagentauth_xcalloc(1,cookie_len);
 
@@ -119,12 +118,12 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     if (count > 0) { 
         free_logbuf = 1;
         action_logbuf = log_action(reported_argv, count);
-        action_nullbuf = null_action(reported_argv, count);
+        agent_action(&action_agentbuf, reported_argv, count);
         pamsshagentauth_free_command_line(reported_argv, count);
     }
     else {
         action_logbuf = "unknown on this platform";
-        action_nullbuf = "unknown on this platform";
+        pamsshagentauth_buffer_init(&action_agentbuf); /* stays empty, means unavailable */
     }
     
     /*
@@ -155,10 +154,10 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     /* pamsshagentauth_debug3("pwd: %s", pwd); */
     pamsshagentauth_buffer_put_cstring(session_id2, pwd);
     /* pamsshagentauth_debug3("action: %s", action_logbuf); */
-    pamsshagentauth_buffer_put_cstring(session_id2, action_nullbuf);
+    pamsshagentauth_buffer_put_string(session_id2, action_agentbuf.buf + action_agentbuf.offset, action_agentbuf.end - action_agentbuf.offset);
     if (free_logbuf) { 
         pamsshagentauth_xfree(action_logbuf);
-        pamsshagentauth_xfree(action_nullbuf);
+        pamsshagentauth_buffer_free(&action_agentbuf);
     }
     /* pamsshagentauth_debug3("hostname: %s", hostname); */
     pamsshagentauth_buffer_put_cstring(session_id2, hostname);
@@ -183,8 +182,6 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
     OpenSSL_add_all_digests();
     pamsshagentauth_session_id2_gen(&session_id2, user, ruser, servicename);
 
-    pamsshagentauth_verbose("command execution: %s (%u)", ruser, uid);
-
     if ((ac = ssh_get_authentication_connection(uid))) {
         pamsshagentauth_verbose("Contacted ssh-agent of user %s (%u)", ruser, uid);
         for (key = ssh_get_first_identity(ac, &comment, 2); key != NULL; key = ssh_get_next_identity(ac, &comment, 2)) 
@@ -197,7 +194,6 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
                 if(userauth_pubkey_from_id(ruser, id, &session_id2)) {
                     retval = 1;
                 }
-                pamsshagentauth_buffer_free(&session_id2);
                 pamsshagentauth_xfree(id->filename);
                 pamsshagentauth_key_free(id->key);
                 pamsshagentauth_xfree(id);
@@ -205,6 +201,7 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
                     break;
             }
         }
+        pamsshagentauth_buffer_free(&session_id2);
         ssh_close_authentication_connection(ac);
     }
     else {

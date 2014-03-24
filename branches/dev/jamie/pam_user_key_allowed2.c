@@ -72,7 +72,7 @@ pamsshagentauth_check_authkeys_file(FILE * f, char *file, Key * key,
     found = pamsshagentauth_key_new(key->type);
 
     while(read_keyfile_line(f, file, line, sizeof(line), &linenum) != -1) {
-        char *cp, *key_options = NULL;
+        char *cp = NULL; /* *key_options = NULL; */
 
         /* Skip leading whitespace, empty and comment lines. */
         for(cp = line; *cp == ' ' || *cp == '\t'; cp++);
@@ -84,7 +84,7 @@ pamsshagentauth_check_authkeys_file(FILE * f, char *file, Key * key,
             int quoted = 0;
 
             pamsshagentauth_verbose("user_key_allowed: check options: '%s'", cp);
-            key_options = cp;
+            /* key_options = cp; */
             for(; *cp && (quoted || (*cp != ' ' && *cp != '\t')); cp++) {
                 if(*cp == '\\' && cp[1] == '"')
                     cp++;                                  /* Skip both */
@@ -244,7 +244,7 @@ pamsshagentauth_user_key_command_allowed2(char *authorized_keys_command,
             pamsshagentauth_logerror("%s: dup2: %s", __func__, strerror(errno));
             _exit(1);
         }
-#ifdef HAVE_SETRESGID && !BROKEN_SETRESGID
+#if defined(HAVE_SETRESGID) && !defined(BROKEN_SETRESGID)
         if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) != 0) {
 #else
         if (setgid(pw->pw_gid) != 0 || setegid(pw->pw_gid) != 0) {
