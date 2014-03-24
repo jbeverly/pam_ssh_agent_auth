@@ -18,8 +18,6 @@
 
 #include "config.h"
 
-#define _GNU_SOURCE /* activate extra prototypes for glibc */
-
 #include <sys/types.h>
 #include <sys/socket.h> /* For CMSG_* */
 
@@ -42,6 +40,12 @@
 #endif
 #ifdef HAVE_UTIME_H
 # include <utime.h>
+#endif
+#ifdef HAVE_TIME_H
+# include <time.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
 #endif
 #ifdef HAVE_MAILLOCK_H
 # include <maillock.h> /* For _PATH_MAILDIR */

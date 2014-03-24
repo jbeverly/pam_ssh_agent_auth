@@ -14,6 +14,7 @@
 
 #ifndef SSH_LOG_H
 #define SSH_LOG_H
+#include <stdarg.h>
 
 /* Supported syslog facilities and levels. */
 typedef enum {

@@ -31,6 +31,6 @@
 #ifndef _ITERATE_SSH_AGENT_KEYS_H
 #define _ITERATE_SSH_AGENT_KEYS_H
 
-int pamsshagentauth_find_authorized_keys(uid_t);
+int pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, const char * servicename);
 
 #endif
