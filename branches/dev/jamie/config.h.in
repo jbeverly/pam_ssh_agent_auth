@@ -868,6 +868,9 @@
 /* Define to 1 if you have the `strnvis' function. */
 #undef HAVE_STRNVIS
 
+/* Define to 1 if you have the `strnvis' function that does accept arguments like pamsshagentauth_strnvis. */
+#undef BROKEN_STRNVIS
+
 /* Define to 1 if you have the `strpbrk' function. */
 #undef HAVE_STRPBRK
 
