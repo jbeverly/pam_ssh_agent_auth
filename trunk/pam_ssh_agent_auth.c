@@ -62,6 +62,8 @@
 
 char           *authorized_keys_file = NULL;
 uint8_t         allow_user_owned_authorized_keys_file = 0;
+char           *authorized_keys_command = NULL;
+char           *authorized_keys_command_user = NULL;
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
 char           *__progname;
@@ -112,6 +114,12 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         }
         if(strncasecmp_literal(*argv_ptr, "file=") == 0 ) { 
             authorized_keys_file_input = *argv_ptr + sizeof("file=") - 1;
+        }
+        if(strncasecmp_literal(*argv_ptr, "authorized_keys_command=") == 0 ) { 
+            authorized_keys_command = *argv_ptr + sizeof("authorized_keys_command=") - 1;
+        }
+        if(strncasecmp_literal(*argv_ptr, "authorized_keys_command_user=") == 0 ) { 
+            authorized_keys_command_user = *argv_ptr + sizeof("authorized_keys_command_user=") - 1;
         }
 #ifdef ENABLE_SUDO_HACK
         if(strncasecmp_literal(*argv_ptr, "sudo_service_name=") == 0) { 
@@ -182,7 +190,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         /* 
          * this pw_uid is used to validate the SSH_AUTH_SOCK, and so must be the uid of the ruser invoking the program, not the target-user
          */
-        if(pamsshagentauth_find_authorized_keys(getpwnam(ruser)->pw_uid)) {
+        if(pamsshagentauth_find_authorized_keys(user, ruser, servicename)) { /* getpwnam(ruser)->pw_uid)) { */
             pamsshagentauth_logit("Authenticated: `%s' as `%s' using %s", ruser, user, authorized_keys_file);
             retval = PAM_SUCCESS;
         } else {

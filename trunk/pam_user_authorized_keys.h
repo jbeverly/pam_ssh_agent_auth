@@ -32,7 +32,7 @@
 #define _PAM_USER_KEY_ALLOWED_H
 
 #include "identity.h"
-int pam_user_key_allowed(Key *);
+int pam_user_key_allowed(const char *, Key *);
 void parse_authorized_key_file(const char *, const char *);
 
 #endif

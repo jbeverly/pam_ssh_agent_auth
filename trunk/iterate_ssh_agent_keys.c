@@ -28,6 +28,8 @@
  */
 
 
+#include <string.h>
+
 #include "includes.h"
 #include "config.h"
 
@@ -39,26 +41,72 @@
 #include "authfd.h"
 #include <stdio.h>
 #include <openssl/evp.h>
+#include "ssh2.h"
+#include "misc.h"
 
 #include "userauth_pubkey_from_id.h"
 #include "identity.h"
+#include "get_command_line.h"
+extern char **environ;
 
-u_char * session_id2 = NULL;
-uint8_t session_id_len = 0;
+static char *
+log_action(char ** action, size_t count)
+{
+    size_t i;
+    char *buf = NULL;
 
-u_char *
-pamsshagentauth_session_id2_gen()
+    if (count == 0)
+        return NULL;
+   
+    buf = pamsshagentauth_xcalloc((count * MAX_LEN_PER_CMDLINE_ARG) + (count * 3), sizeof(*buf));
+    for (i = 0; i < count; i++) {
+        strcat(buf, (i > 0) ? " '" : "'");
+        strncat(buf, action[i], MAX_LEN_PER_CMDLINE_ARG);
+        strcat(buf, "'");
+    }
+    return buf;
+}
+
+void
+agent_action(Buffer *buf, char ** action, size_t count)
+{
+    size_t i;
+    pamsshagentauth_buffer_init(buf);
+
+    pamsshagentauth_buffer_put_int(buf, count);
+
+    for (i = 0; i < count; i++) {
+        pamsshagentauth_buffer_put_cstring(buf, action[i]);
+    }
+}
+
+
+void
+pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
+                                const char * ruser, const char * servicename)
 {
     char *cookie = NULL;
     uint8_t i = 0;
     uint32_t rnd = 0;
+    uint8_t cookie_len;
+    char hostname[256] = { 0 };
+    char pwd[1024] = { 0 };
+    time_t ts;
+    char ** reported_argv = NULL;
+    size_t count = 0;
+    char * action_logbuf = NULL;
+    Buffer action_agentbuf;
+    uint8_t free_logbuf = 0;
 
     rnd = pamsshagentauth_arc4random();
-    session_id_len = (uint8_t) rnd;
+    cookie_len = ((uint8_t) rnd);
+    while (cookie_len < 16) { 
+        cookie_len += 16;                                          /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
+    }
 
-    cookie = calloc(1,session_id_len);
+    cookie = pamsshagentauth_xcalloc(1,cookie_len);
 
-    for (i = 0; i < session_id_len; i++) {
+    for (i = 0; i < cookie_len; i++) {
         if (i % 4 == 0) {
             rnd = pamsshagentauth_arc4random();
         }
@@ -66,23 +114,76 @@ pamsshagentauth_session_id2_gen()
         rnd >>= 8;
     }
 
-    return cookie;
+    count = pamsshagentauth_get_command_line(&reported_argv);
+    if (count > 0) { 
+        free_logbuf = 1;
+        action_logbuf = log_action(reported_argv, count);
+        agent_action(&action_agentbuf, reported_argv, count);
+        pamsshagentauth_free_command_line(reported_argv, count);
+    }
+    else {
+        action_logbuf = "unknown on this platform";
+        pamsshagentauth_buffer_init(&action_agentbuf); /* stays empty, means unavailable */
+    }
+    
+    /*
+    action = getenv("SUDO_COMMAND");
+    if(!action) {
+        action = getenv("PAM_AUTHORIZED_ACTION");
+        if(!action) {
+            action = empty;
+        }
+    }
+    */
+
+    gethostname(hostname, sizeof(hostname) - 1);
+    getcwd(pwd, sizeof(pwd) - 1);
+    time(&ts);
+
+    pamsshagentauth_buffer_init(session_id2);
+
+    pamsshagentauth_buffer_put_int(session_id2, PAM_SSH_AGENT_AUTH_REQUESTv1);
+    /* pamsshagentauth_debug3("cookie: %s", pamsshagentauth_tohex(cookie, cookie_len)); */
+    pamsshagentauth_buffer_put_string(session_id2, cookie, cookie_len);
+    /* pamsshagentauth_debug3("user: %s", user); */
+    pamsshagentauth_buffer_put_cstring(session_id2, user);
+    /* pamsshagentauth_debug3("ruser: %s", ruser); */
+    pamsshagentauth_buffer_put_cstring(session_id2, ruser);
+    /* pamsshagentauth_debug3("servicename: %s", servicename); */
+    pamsshagentauth_buffer_put_cstring(session_id2, servicename);
+    /* pamsshagentauth_debug3("pwd: %s", pwd); */
+    pamsshagentauth_buffer_put_cstring(session_id2, pwd);
+    /* pamsshagentauth_debug3("action: %s", action_logbuf); */
+    pamsshagentauth_buffer_put_string(session_id2, action_agentbuf.buf + action_agentbuf.offset, action_agentbuf.end - action_agentbuf.offset);
+    if (free_logbuf) { 
+        pamsshagentauth_xfree(action_logbuf);
+        pamsshagentauth_buffer_free(&action_agentbuf);
+    }
+    /* pamsshagentauth_debug3("hostname: %s", hostname); */
+    pamsshagentauth_buffer_put_cstring(session_id2, hostname);
+    /* pamsshagentauth_debug3("ts: %ld", ts); */
+    pamsshagentauth_buffer_put_int64(session_id2, (uint64_t) ts);
+
+    free(cookie);
+    return;
 }
 
 int
-pamsshagentauth_find_authorized_keys(uid_t uid)
+pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, const char * servicename)
 {
+    Buffer session_id2 = { 0 };
     Identity *id;
     Key *key;
     AuthenticationConnection *ac;
     char *comment;
     uint8_t retval = 0;
+    uid_t uid = getpwnam(ruser)->pw_uid;
 
     OpenSSL_add_all_digests();
-    session_id2 = pamsshagentauth_session_id2_gen();
+    pamsshagentauth_session_id2_gen(&session_id2, user, ruser, servicename);
 
     if ((ac = ssh_get_authentication_connection(uid))) {
-        pamsshagentauth_verbose("Contacted ssh-agent of user %s (%u)", getpwuid(uid)->pw_name, uid);
+        pamsshagentauth_verbose("Contacted ssh-agent of user %s (%u)", ruser, uid);
         for (key = ssh_get_first_identity(ac, &comment, 2); key != NULL; key = ssh_get_next_identity(ac, &comment, 2)) 
         {
             if(key != NULL) {
@@ -90,7 +191,7 @@ pamsshagentauth_find_authorized_keys(uid_t uid)
                 id->key = key;
                 id->filename = comment;
                 id->ac = ac;
-                if(userauth_pubkey_from_id(id)) {
+                if(userauth_pubkey_from_id(ruser, id, &session_id2)) {
                     retval = 1;
                 }
                 pamsshagentauth_xfree(id->filename);
@@ -100,12 +201,13 @@ pamsshagentauth_find_authorized_keys(uid_t uid)
                     break;
             }
         }
+        pamsshagentauth_buffer_free(&session_id2);
         ssh_close_authentication_connection(ac);
     }
     else {
         pamsshagentauth_verbose("No ssh-agent could be contacted");
     }
-    pamsshagentauth_xfree(session_id2);
+    /* pamsshagentauth_xfree(session_id2); */
     EVP_cleanup();
     return retval;
 }

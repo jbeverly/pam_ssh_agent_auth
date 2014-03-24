@@ -70,30 +70,40 @@
  *
  * Returns 0 on success and -1 on failure
  */
+
 int
-pamsshagentauth_secure_filename(FILE *f, const char *file, struct passwd *pw,
-    char *err, size_t errlen)
+pamsshagentauth_auth_secure_path(const char *name, struct stat *stp,
+        const char *pw_dir, uid_t uid, char *err, size_t errlen)
 {
-	uid_t uid = pw->pw_uid;
 	char buf[MAXPATHLEN], homedir[MAXPATHLEN];
 	char *cp;
 	int comparehome = 0;
 	struct stat st;
 
-    pamsshagentauth_verbose("secure_filename: checking for uid: %u", uid);
+    pamsshagentauth_verbose("auth_secure_filename: checking for uid: %u", uid);
 
-	if (realpath(file, buf) == NULL) {
-		snprintf(err, errlen, "realpath %s failed: %s", file,
+	if (realpath(name, buf) == NULL) {
+		snprintf(err, errlen, "realpath %s failed: %s", name,
 		    strerror(errno));
 		return -1;
 	}
-	if (realpath(pw->pw_dir, homedir) != NULL)
+	/* if (realpath(pw->pw_dir, homedir) != NULL) */
+    if (pw_dir != NULL && realpath(pw_dir, homedir) != NULL)
 		comparehome = 1;
 
 	/* check the open file to avoid races */
-	if (fstat(fileno(f), &st) < 0 ||
-	    (st.st_uid != 0 && st.st_uid != uid) ||
-	    (st.st_mode & 022) != 0) {
+	/* 
+     * if (fstat(fileno(f), &st) < 0 ||
+	 *    (st.st_uid != 0 && st.st_uid != uid) ||
+	 *    (st.st_mode & 022) != 0) {
+    */
+    if (!S_ISREG(stp->st_mode)) {
+        snprintf(err, errlen, "%s is not a regular file", buf);
+        return -1;
+    }
+
+    if ((stp->st_uid != 0 && stp->st_uid != uid) ||
+            (stp->st_mode & 022) != 0) {
 		snprintf(err, errlen, "bad ownership or modes for file %s",
 		    buf);
 		return -1;
@@ -130,5 +140,27 @@ pamsshagentauth_secure_filename(FILE *f, const char *file, struct passwd *pw,
 			break;
 	}
 	return 0;
+}
+
+/*
+ * Version of secure_path() that accepts an open file descriptor to
+ * avoid races.
+ *
+ * Returns 0 on success and -1 on failure
+ */
+int
+pamsshagentauth_secure_filename(FILE *f, const char *file, struct passwd *pw,
+    char *err, size_t errlen)
+{
+   struct stat st;
+   char buf[MAXPATHLEN] = { 0 };
+
+   /* check the open file to avoid races */
+   if (fstat(fileno(f), &st) < 0) {
+       snprintf(err, errlen, "cannot stat file %s: %s",
+           buf, strerror(errno));
+       return -1;
+   }
+   return pamsshagentauth_auth_secure_path(file, &st, pw->pw_dir, pw->pw_uid, err, errlen);
 }
 

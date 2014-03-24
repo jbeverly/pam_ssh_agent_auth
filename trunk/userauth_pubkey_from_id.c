@@ -48,11 +48,12 @@
 #include "identity.h"
 #include "pam_user_authorized_keys.h"
 
-extern u_char  *session_id2;
+/* extern u_char  *session_id2;
 extern uint8_t  session_id_len;
+ */
 
 int
-userauth_pubkey_from_id(Identity * id)
+userauth_pubkey_from_id(const char *ruser, Identity * id, Buffer * session_id2)
 {
     Buffer          b = { 0 };
     char           *pkalg = NULL;
@@ -63,7 +64,7 @@ userauth_pubkey_from_id(Identity * id)
     pkalg = (char *) key_ssh_name(id->key);
 
     /* first test if this key is even allowed */
-    if(! pam_user_key_allowed(id->key))
+    if(! pam_user_key_allowed(ruser, id->key))
         goto user_auth_clean_exit;
 
     if(pamsshagentauth_key_to_blob(id->key, &pkblob, &blen) == 0)
@@ -72,10 +73,10 @@ userauth_pubkey_from_id(Identity * id)
     /* construct packet to sign and test */
     pamsshagentauth_buffer_init(&b);
 
-    pamsshagentauth_buffer_put_string(&b, session_id2, session_id_len);
-    pamsshagentauth_buffer_put_char(&b, SSH2_MSG_USERAUTH_REQUEST);
-    pamsshagentauth_buffer_put_cstring(&b, "root");
-    pamsshagentauth_buffer_put_cstring(&b, "ssh-userauth");
+    pamsshagentauth_buffer_put_string(&b, session_id2->buf + session_id2->offset, session_id2->end - session_id2->offset);
+    pamsshagentauth_buffer_put_char(&b, SSH2_MSG_USERAUTH_TRUST_REQUEST); 
+    pamsshagentauth_buffer_put_cstring(&b, ruser);
+    pamsshagentauth_buffer_put_cstring(&b, "pam_ssh_agent_auth");
     pamsshagentauth_buffer_put_cstring(&b, "publickey");
     pamsshagentauth_buffer_put_char(&b, 1);
     pamsshagentauth_buffer_put_cstring(&b, pkalg);
@@ -89,8 +90,8 @@ userauth_pubkey_from_id(Identity * id)
         authenticated = 1;
 
   user_auth_clean_exit:
-    if(&b != NULL)
-        pamsshagentauth_buffer_free(&b);
+    /* if(&b != NULL) */
+    pamsshagentauth_buffer_free(&b);
     if(sig != NULL)
         pamsshagentauth_xfree(sig);
     if(pkblob != NULL)
