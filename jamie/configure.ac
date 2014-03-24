@@ -17,6 +17,7 @@
 AC_INIT(OpenSSH, Portable, openssh-unix-dev@mindrot.org)
 AC_REVISION($Revision: 1.397 $)
 AC_CONFIG_SRCDIR([pam_ssh_agent_auth.c])
+AC_USE_SYSTEM_EXTENSIONS
 
 AC_CONFIG_HEADER(config.h)
 AC_PROG_CC
@@ -338,6 +339,14 @@ AC_CHECK_HEADERS( \
 	time.h \
 	unistd.h \
 )
+
+AC_CHECK_FUNC(strnvis, found_strnvis=yes, found_strnvis=no)
+AS_VAR_IF([found_strnvis],[yes],
+		  [AC_MSG_CHECKING([if strnvis argument order is what we expect])
+		   AC_EGREP_HEADER([strnvis[[:space:]]*\([[:space:]]*char[[:space:]]*\*[[:space:]]*,[[:space:]]*const[[:space:]]+char[[:space:]]*\*,[[:space:]]*size_t[[:space:]]*,[[:space:]]*int[[:space:]]*\)],[vis.h],
+			[AC_MSG_RESULT([yes])],
+			[AC_MSG_RESULT([no])
+			 AC_DEFINE([BROKEN_STRNVIS])])])
 
 # lastlog.h requires sys/time.h to be included first on Solaris
 AC_CHECK_HEADERS(lastlog.h, [], [], [
