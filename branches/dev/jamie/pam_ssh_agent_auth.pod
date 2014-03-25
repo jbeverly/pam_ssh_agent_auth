@@ -1,8 +1,12 @@
-=head1 PAM_SSH_AGENT_AUTH
+=head1 NAME
+
+pam_ssh_agent_auth - PAM module for granting permissions based on SSH agent requests
+
+=head1 DESCRIPTION
 
 This module provides authentication via ssh-agent.  If an ssh-agent listening at SSH_AUTH_SOCK can successfully authenticate that it has the secret key for a public key in the specified file, authentication is granted, otherwise authentication fails.
 
-=head1 SUMMARY
+=head1 CONFIGURATION
 
 =over
 
@@ -10,7 +14,8 @@ This module provides authentication via ssh-agent.  If an ssh-agent listening at
  auth	sufficient	pam_ssh_agent_auth.so file=/etc/security/authorized_keys
 
 =item /etc/sudoers:
-
+ 
+In older versions of sudo (<= 1.7.12) it was necessary to set:
  Defaults    env_keep += "SSH_AUTH_SOCK"
 
 =back
@@ -64,7 +69,7 @@ This defaults to "sudo".
 
 =item ~  -- same as in shells, a user's Home directory
 
-Automatically enables allow_user_owned_authorized_keys_file if used in the context of ~/. If used as ~user/, it would expect the file to be owned by 'user', unless you explicitely set allow_user_owned_authorized_keys_file
+Automatically enables allow_user_owned_authorized_keys_file if used in the context of ~/. If used as ~user/, it would expect the file to be owned by 'user', unless you explicitly set allow_user_owned_authorized_keys_file
 
 =item %h -- User's Home directory
 

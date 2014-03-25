@@ -97,6 +97,8 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     char * action_logbuf = NULL;
     Buffer action_agentbuf;
     uint8_t free_logbuf = 0;
+    char * retc;
+    int32_t reti;
 
     rnd = pamsshagentauth_arc4random();
     cookie_len = ((uint8_t) rnd);
@@ -136,8 +138,8 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     }
     */
 
-    gethostname(hostname, sizeof(hostname) - 1);
-    getcwd(pwd, sizeof(pwd) - 1);
+    reti = gethostname(hostname, sizeof(hostname) - 1);
+    retc = getcwd(pwd, sizeof(pwd) - 1);
     time(&ts);
 
     pamsshagentauth_buffer_init(session_id2);
@@ -152,7 +154,8 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     /* pamsshagentauth_debug3("servicename: %s", servicename); */
     pamsshagentauth_buffer_put_cstring(session_id2, servicename);
     /* pamsshagentauth_debug3("pwd: %s", pwd); */
-    pamsshagentauth_buffer_put_cstring(session_id2, pwd);
+    if(retc)
+        pamsshagentauth_buffer_put_cstring(session_id2, pwd);
     /* pamsshagentauth_debug3("action: %s", action_logbuf); */
     pamsshagentauth_buffer_put_string(session_id2, action_agentbuf.buf + action_agentbuf.offset, action_agentbuf.end - action_agentbuf.offset);
     if (free_logbuf) { 
@@ -160,7 +163,8 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
         pamsshagentauth_buffer_free(&action_agentbuf);
     }
     /* pamsshagentauth_debug3("hostname: %s", hostname); */
-    pamsshagentauth_buffer_put_cstring(session_id2, hostname);
+    if(reti >= 0)
+        pamsshagentauth_buffer_put_cstring(session_id2, hostname);
     /* pamsshagentauth_debug3("ts: %ld", ts); */
     pamsshagentauth_buffer_put_int64(session_id2, (uint64_t) ts);
 
