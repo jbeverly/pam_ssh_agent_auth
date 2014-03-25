@@ -59,8 +59,7 @@
 /* return 1 if user allows given key */
 /* Modified slightly from original found in auth2-pubkey.c */
 static int
-pamsshagentauth_check_authkeys_file(FILE * f, char *file, Key * key,
-                                    struct passwd *pw)
+pamsshagentauth_check_authkeys_file(FILE * f, char *file, Key * key)
 {
     char line[SSH_MAX_PUBKEY_BYTES];
     int found_key = 0;
@@ -149,7 +148,7 @@ pamsshagentauth_user_key_allowed2(struct passwd *pw, Key * key, char *file)
         return 0;
     }
 
-    found_key = pamsshagentauth_check_authkeys_file(f, file, key, pw);
+    found_key = pamsshagentauth_check_authkeys_file(f, file, key);
     fclose(f);
     return found_key;
 }
@@ -288,8 +287,7 @@ pamsshagentauth_user_key_command_allowed2(char *authorized_keys_command,
         while(waitpid(pid, NULL, 0) == -1 && errno == EINTR);
         goto out;
     }
-    ok = pamsshagentauth_check_authkeys_file(f, authorized_keys_command, key,
-                                             pw);
+    ok = pamsshagentauth_check_authkeys_file(f, authorized_keys_command, key);
     fclose(f);
 
     while(waitpid(pid, &status, 0) == -1) {

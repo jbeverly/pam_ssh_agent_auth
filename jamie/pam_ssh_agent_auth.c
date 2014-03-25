@@ -59,6 +59,7 @@
 #include "pam_user_authorized_keys.h"
 
 #define strncasecmp_literal(A,B) strncasecmp( A, B, sizeof(B) - 1)
+#define UNUSED(expr) do { (void)(expr); } while (0)
 
 char           *authorized_keys_file = NULL;
 uint8_t         allow_user_owned_authorized_keys_file = 0;
@@ -92,6 +93,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     facility = SYSLOG_FACILITY_AUTHPRIV;
 #endif
 
+    UNUSED(flags);
     pam_get_item(pamh, PAM_SERVICE, (void *) &servicename);
 /*
  * XXX: 
@@ -215,6 +217,10 @@ cleanexit:
 PAM_EXTERN int
 pam_sm_setcred(pam_handle_t * pamh, int flags, int argc, const char **argv)
 {
+    UNUSED(pamh);
+    UNUSED(flags);
+    UNUSED(argc);
+    UNUSED(argv);
     return PAM_SUCCESS;
 }
 

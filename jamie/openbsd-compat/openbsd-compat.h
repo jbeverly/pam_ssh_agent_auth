@@ -40,7 +40,6 @@
 #include "base64.h"
 #include "sigact.h"
 #include "glob.h"
-#include "readpassphrase.h"
 #include "vis.h"
 #include "getrrsetbyname.h"
 #include "sha2.h"

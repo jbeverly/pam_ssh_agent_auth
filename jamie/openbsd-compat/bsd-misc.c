@@ -32,6 +32,8 @@
 
 #include "xmalloc.h"
 
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
 #ifndef HAVE___PROGNAME
 char *__progname;
 #endif
@@ -44,7 +46,7 @@ char *ssh_get_progname(char *argv0)
 {
 #ifdef HAVE___PROGNAME
 	extern char *__progname;
-
+    UNUSED(argv0);
 	return pamsshagentauth_xstrdup(__progname);
 #else
 	char *p;
@@ -64,6 +66,7 @@ char *ssh_get_progname(char *argv0)
 #ifndef HAVE_SETLOGIN
 int setlogin(const char *name)
 {
+    UNUSED(name);
 	return (0);
 }
 #endif /* !HAVE_SETLOGIN */
