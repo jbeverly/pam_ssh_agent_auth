@@ -156,6 +156,8 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     /* pamsshagentauth_debug3("pwd: %s", pwd); */
     if(retc)
         pamsshagentauth_buffer_put_cstring(session_id2, pwd);
+    else
+        pamsshagentauth_buffer_put_cstring(session_id2, "");
     /* pamsshagentauth_debug3("action: %s", action_logbuf); */
     pamsshagentauth_buffer_put_string(session_id2, action_agentbuf.buf + action_agentbuf.offset, action_agentbuf.end - action_agentbuf.offset);
     if (free_logbuf) { 
@@ -165,6 +167,8 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     /* pamsshagentauth_debug3("hostname: %s", hostname); */
     if(reti >= 0)
         pamsshagentauth_buffer_put_cstring(session_id2, hostname);
+    else
+        pamsshagentauth_buffer_put_cstring(session_id2, "");
     /* pamsshagentauth_debug3("ts: %ld", ts); */
     pamsshagentauth_buffer_put_int64(session_id2, (uint64_t) ts);
 
