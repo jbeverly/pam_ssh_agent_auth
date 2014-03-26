@@ -20,7 +20,7 @@ AC_REVISION($Revision: 1.397 $)
 AC_CONFIG_SRCDIR([pam_ssh_agent_auth.c])
 AC_USE_SYSTEM_EXTENSIONS
 
-AC_CONFIG_SRCDIR([config.h])
+AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 AC_PROG_CC
 AC_C_INLINE
