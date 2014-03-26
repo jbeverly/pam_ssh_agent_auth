@@ -623,7 +623,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_unique_file="config.h"
+ac_unique_file="config.h.in"
 ac_header_list=
 ac_subst_vars='LTLIBOBJS
 mansubdir
