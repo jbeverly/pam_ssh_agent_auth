@@ -15,7 +15,7 @@ This module provides authentication via ssh-agent.  If an ssh-agent listening at
 
 =item /etc/sudoers:
  
-In older versions of sudo (<= 1.7.12) it was necessary to set:
+In older versions of sudo (< 1.8.5) it was necessary to set:
  Defaults    env_keep += "SSH_AUTH_SOCK"
 
 =back
