@@ -1,6 +1,6 @@
 Summary: PAM module providing authentication via ssh-agent
 Name: pam_ssh_agent_auth
-Version: 0.10.1
+Version: 0.10.2
 Release: 1%{?dist}
 License: BSD
 Group: System Environment Base
@@ -15,7 +15,7 @@ Packager: Jamie Beverly
 pam_ssh_agent_auth is a PAM module which permits PAM authentication via your
 keyring in a forwarded ssh-agent.
 
-Release 0.10.1 is stable, and has been tested on FreeBSD, Solaris 10, Solaris 11,
+Release 0.10.2 is stable, and has been tested on FreeBSD, Solaris 10, Solaris 11,
 RHEL5, RHEL6, Debian Wheezy, Ubuntu 12.04 (LTS), Ubuntu 13.10,
 and MacOS X 10.7.
 
@@ -34,7 +34,7 @@ There are caveats of course, ssh-agent forwarding has it’s own security risks
 which must be carefully considered for your environment. In cases where there
 are not untrustworthy intermediate servers, and you wish to retain traceability,
 accountability, and required authentication for privileged command invocation,
-the benefits should outweigh the risks. Release 0.10.1 can be downloaded from
+the benefits should outweigh the risks. Release 0.10.2 can be downloaded from
 SourceForge: https://sourceforge.net/project/showfiles.php?group_id=249556
 
 If you encounter any issues with usability or security, please use the project's
@@ -73,6 +73,14 @@ authentication.
 %doc %{_mandir}/man8/pam_ssh_agent_auth.8*
 
 %changelog
+* Wed Mar 26 2014 Jamie Beverly <soupboy@sourceforge.net> - 0.10.2
+- fix autoconf to work with autoreconf -fi
+- correct sudo-version note in man page
+- fix wire-protocol issue if a call fails
+- add licensing information to files missing it
+- correct licensing in debian files
+- fix compiler warnings with -D_FORTIFY_SOURCE=2
+- fix compiler warnings with -Wunused-parameter
 * Thu Jan 9 2014 Jamie Beverly <soupboy@sourceforge.net> - 0.10.1
 - Added support for authorized_keys_command and authorized_keys_command_user
 * Sun 22 Sep 2013 Jamie Beverly <soupboy@sourceforge.net> - 0.9.6
