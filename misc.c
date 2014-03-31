@@ -56,6 +56,8 @@
 #include "log.h"
 #include "ssh.h"
 
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
 /* remove newline at end of string */
 char *
 pamsshagentauth_chop(char *s)
@@ -707,6 +709,8 @@ pamsshagentauth_tun_open(int tun, int mode)
 	    mode, strerror(errno));
 	return (-1);
 #else
+    UNUSED(tun);
+    UNUSED(mode);
 	pamsshagentauth_logerror("Tunnel interfaces are not supported on this platform");
 	return (-1);
 #endif

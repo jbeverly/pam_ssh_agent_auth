@@ -6,7 +6,7 @@
 #
 
 PORTNAME       = pam_ssh_agent_auth
-PORTVERSION    = 0.10.1
+PORTVERSION    = 0.10.2
 CATEGORIES     = security
 MASTER_SITES   = http://downloads.sourceforge.net/pamsshagentauth/pam_ssh_agent_auth-0.9.5.tar.bz2
 EXTRACT_SUFX   = .tar.bz2
