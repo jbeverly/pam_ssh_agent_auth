@@ -71,9 +71,10 @@ xmmap(size_t size)
 			pamsshagentauth_fatal("mkstemp(\"%s\"): %s",
 			    MM_SWAP_TEMPLATE, strerror(errno));
 		unlink(tmpname);
-		ftruncate(tmpfd, size);
-		address = mmap(NULL, size, PROT_WRITE|PROT_READ, MAP_SHARED,
-		    tmpfd, (off_t)0);
+		if(ftruncate(tmpfd, size) >= 0) {
+            address = mmap(NULL, size, PROT_WRITE|PROT_READ, MAP_SHARED,
+                tmpfd, (off_t)0);
+        }
 		close(tmpfd);
 	}
 

@@ -1,3 +1,13 @@
+pam-ssh-agent-auth (0.10.2-1) stable; urgency=low
+  * fix autoconf to work with autoreconf -fi
+  * correct sudo-version note in man page
+  * fix wire-protocol issue if a call fails
+  * add licensing information to files missing it
+  * correct licensing in debian files
+  * fix compiler warnings with -D_FORTIFY_SOURCE=2
+  * fix compiler warnings with -Wunused-parameter
+
+ -- Jamie Beverly <soupboy@sourceforge.net> Thu, 9 Jan 2014 06:23:00 -0800
 pam-ssh-agent-auth (0.10.1-1) stable; urgency=low
   * support for authorized_keys_command and authorized_keys_command_user
 

@@ -61,6 +61,7 @@ extern char *__progname;
 
 #define LOG_SYSLOG_VIS	(VIS_CSTYLE|VIS_NL|VIS_TAB|VIS_OCTAL)
 #define LOG_STDERR_VIS	(VIS_SAFE|VIS_OCTAL)
+#define UNUSED(expr) do { (void)(expr); } while (0)
 
 /* textual representation of log-facilities/levels */
 
@@ -146,6 +147,8 @@ pamsshagentauth_sigdie(const char *fmt,...)
 	va_start(args, fmt);
 	pamsshagentauth_do_log(SYSLOG_LEVEL_FATAL, fmt, args);
 	va_end(args);
+#else
+    UNUSED(fmt);
 #endif
 	_exit(1);
 }
@@ -366,12 +369,16 @@ pamsshagentauth_do_log(LogLevel level, const char *fmt, va_list args)
 
     if(level == SYSLOG_LEVEL_FATAL) {
 		snprintf(msgbuf, sizeof msgbuf, "%s\r\nThis incident has been reported to the authorities\r\n", fmtbuf);
-		write(STDERR_FILENO, msgbuf, strlen(msgbuf));
+		if (write(STDERR_FILENO, msgbuf, strlen(msgbuf)) < 0) {
+            _exit(0);
+        }
     }
 
 	if (log_on_stderr) {
 		snprintf(msgbuf, sizeof msgbuf, "%s\r\n", fmtbuf);
-		write(STDERR_FILENO, msgbuf, strlen(msgbuf));
+		if (write(STDERR_FILENO, msgbuf, strlen(msgbuf)) < 0) {
+            _exit(0);
+        }
 	} else {
 #if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT)
 		openlog_r(argv0 ? argv0 : __progname, LOG_PID, log_facility, &sdata);
