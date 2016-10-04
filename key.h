@@ -28,17 +28,23 @@
 
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
+#include <openssl/ec.h>
+#include <openssl/ecdsa.h>
 
 typedef struct Key Key;
 enum types {
 	KEY_RSA1,
 	KEY_RSA,
 	KEY_DSA,
+	KEY_ECDSA,
 	KEY_UNSPEC
 };
 enum fp_type {
 	SSH_FP_SHA1,
-	SSH_FP_MD5
+	SSH_FP_MD5,
+	SSH_FP_SHA256,
+	SSH_FP_SHA384,
+	SSH_FP_SHA521
 };
 enum fp_rep {
 	SSH_FP_HEX,
@@ -53,6 +59,7 @@ struct Key {
 	int	 flags;
 	RSA	*rsa;
 	DSA	*dsa;
+	EC_KEY *ecdsa;
 };
 
 Key		*pamsshagentauth_key_new(int);
@@ -83,5 +90,7 @@ int	 ssh_dss_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
 int	 ssh_dss_verify(const Key *, const u_char *, u_int, const u_char *, u_int);
 int	 ssh_rsa_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
 int	 ssh_rsa_verify(const Key *, const u_char *, u_int, const u_char *, u_int);
+int	 ssh_ecdsa_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
+int	 ssh_ecdsa_verify(const Key *, const u_char *, u_int, const u_char *, u_int);
 
 #endif

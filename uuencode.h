@@ -26,4 +26,4 @@
 
 int	 pamsshagentauth_uuencode(const u_char *, u_int, char *, size_t);
 int	 pamsshagentauth_uudecode(const char *, u_char *, size_t);
-void	 pamsshagentauth_dump_base64(FILE *, u_char *, u_int);
+void pamsshagentauth_dump_base64(FILE *, const u_char *, u_int);

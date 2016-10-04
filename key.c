@@ -32,10 +32,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- /* 
-  * My single line "return -1; / * avoid compiler warning * / is licensed 
-  * under same BSD style license as the remainder of this file. 
-  * Feel free to use it for any purpose... ... ... Jamie Beverly ... ... ... 
+ /*
+  * My single line "return -1; / * avoid compiler warning * / is licensed
+  * under same BSD style license as the remainder of this file.
+  * Feel free to use it for any purpose... ... ... Jamie Beverly ... ... ...
   */
 
 #include "includes.h"
@@ -56,6 +56,8 @@
 #include "buffer.h"
 #include "log.h"
 
+#define CB_MAX_ECPOINT	((528 * 2 / 8) + 1)
+
 Key *
 pamsshagentauth_key_new(int type)
 {
@@ -66,6 +68,7 @@ pamsshagentauth_key_new(int type)
 	k->type = type;
 	k->dsa = NULL;
 	k->rsa = NULL;
+	k->ecdsa = NULL;
 	switch (k->type) {
 	case KEY_RSA1:
 	case KEY_RSA:
@@ -89,6 +92,9 @@ pamsshagentauth_key_new(int type)
 		if ((dsa->pub_key = BN_new()) == NULL)
 			pamsshagentauth_fatal("key_new: BN_new failed");
 		k->dsa = dsa;
+		break;
+	case KEY_ECDSA:
+		// do nothing until we know which group
 		break;
 	case KEY_UNSPEC:
 		break;
@@ -123,6 +129,10 @@ pamsshagentauth_key_new_private(int type)
 		if ((k->dsa->priv_key = BN_new()) == NULL)
 			pamsshagentauth_fatal("key_new_private: BN_new failed");
 		break;
+	case KEY_ECDSA:
+		if (EC_KEY_set_private_key(k->ecdsa, BN_new()) != 1)
+			pamsshagentauth_fatal("key_new_private: EC_KEY_set_private_key failed");
+		break;
 	case KEY_UNSPEC:
 		break;
 	default:
@@ -147,6 +157,11 @@ pamsshagentauth_key_free(Key *k)
 		if (k->dsa != NULL)
 			DSA_free(k->dsa);
 		k->dsa = NULL;
+		break;
+	case KEY_ECDSA:
+		if (k->ecdsa != NULL)
+			EC_KEY_free(k->ecdsa);
+		k->ecdsa = NULL;
 		break;
 	case KEY_UNSPEC:
 		break;
@@ -174,6 +189,19 @@ pamsshagentauth_key_equal(const Key *a, const Key *b)
 		    BN_cmp(a->dsa->q, b->dsa->q) == 0 &&
 		    BN_cmp(a->dsa->g, b->dsa->g) == 0 &&
 		    BN_cmp(a->dsa->pub_key, b->dsa->pub_key) == 0;
+	case KEY_ECDSA:
+	{
+		return a->ecdsa != NULL && b->ecdsa != NULL &&
+			EC_KEY_check_key(a->ecdsa) == 1 &&
+			EC_KEY_check_key(b->ecdsa) == 1 &&
+			EC_GROUP_cmp(EC_KEY_get0_group(a->ecdsa),
+				EC_KEY_get0_group(a->ecdsa), NULL) == 0 &&
+			EC_POINT_cmp(EC_KEY_get0_group(a->ecdsa),
+				EC_KEY_get0_public_key(a->ecdsa),
+				EC_KEY_get0_public_key(b->ecdsa), NULL) == 0 &&
+			BN_cmp(EC_KEY_get0_private_key(a->ecdsa),
+				EC_KEY_get0_private_key(b->ecdsa)) == 0;
+	}
 	default:
 		pamsshagentauth_fatal("key_equal: bad key type %d", a->type);
 	}
@@ -214,6 +242,7 @@ pamsshagentauth_key_fingerprint_raw(const Key *k, enum fp_type dgst_type,
 		BN_bn2bin(k->rsa->e, blob + nlen);
 		break;
 	case KEY_DSA:
+	case KEY_ECDSA:
 	case KEY_RSA:
 		pamsshagentauth_key_to_blob(k, &blob, &len);
 		break;
@@ -418,6 +447,7 @@ pamsshagentauth_key_read(Key *ret, char **cpp)
 	case KEY_UNSPEC:
 	case KEY_RSA:
 	case KEY_DSA:
+	case KEY_ECDSA:
 		space = strchr(cp, ' ');
 		if (space == NULL) {
 			pamsshagentauth_verbose("key_read: missing whitespace");
@@ -439,7 +469,7 @@ pamsshagentauth_key_read(Key *ret, char **cpp)
 			ret->type = type;
 		} else if (ret->type != type) {
 			/* is a key, but different type */
-			pamsshagentauth_verbose("key_read: type mismatch");
+			pamsshagentauth_verbose("key_read: type mismatch expected %d found %d", ret->type, type);
 			return -1;
 		}
 		len = 2*strlen(cp);
@@ -462,7 +492,8 @@ pamsshagentauth_key_read(Key *ret, char **cpp)
 			return -1;
 		}
 /*XXXX*/
-		if (ret->type == KEY_RSA) {
+		switch (ret->type) {
+		case (KEY_RSA):
 			if (ret->rsa != NULL)
 				RSA_free(ret->rsa);
 			ret->rsa = k->rsa;
@@ -471,7 +502,8 @@ pamsshagentauth_key_read(Key *ret, char **cpp)
 #ifdef DEBUG_PK
 			RSA_print_fp(stderr, ret->rsa, 8);
 #endif
-		} else {
+			break;
+		case (KEY_DSA):
 			if (ret->dsa != NULL)
 				DSA_free(ret->dsa);
 			ret->dsa = k->dsa;
@@ -480,6 +512,17 @@ pamsshagentauth_key_read(Key *ret, char **cpp)
 #ifdef DEBUG_PK
 			DSA_print_fp(stderr, ret->dsa, 8);
 #endif
+			break;
+		case (KEY_ECDSA):
+			if (ret->ecdsa != NULL)
+				EC_KEY_free(ret->ecdsa);
+			ret->ecdsa = k->ecdsa;
+			k->ecdsa = NULL;
+			success = 1;
+#ifdef DEBUG_PK
+			EC_KEY_print_fp(stderr, ret->ecdsa, 8);
+#endif
+			break;
 		}
 /*XXXX*/
 		pamsshagentauth_key_free(k);
@@ -542,6 +585,8 @@ pamsshagentauth_key_type(const Key *k)
 		return "RSA";
 	case KEY_DSA:
 		return "DSA";
+	case KEY_ECDSA:
+		return "ECDSA";
 	}
 	return "unknown";
 }
@@ -554,6 +599,38 @@ key_ssh_name(const Key *k)
 		return "ssh-rsa";
 	case KEY_DSA:
 		return "ssh-dss";
+	case KEY_ECDSA:
+	{
+		int nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(k->ecdsa));
+		switch (nid) {
+		case NID_X9_62_prime256v1:
+			return "ecdsa-sha2-nistp256";
+		case NID_secp384r1:
+			return "ecdsa-sha2-nistp384";
+		case NID_secp521r1:
+			return "ecdsa-sha2-nistp521";
+		}
+	}
+	}
+	return "ssh-unknown";
+}
+
+const char *
+group_ssh_name(const Key *k)
+{
+	switch (k->type) {
+	case KEY_ECDSA:
+	{
+		int nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(k->ecdsa));
+		switch (nid) {
+		case NID_X9_62_prime256v1:
+			return "nistp256";
+		case NID_secp384r1:
+			return "nistp384";
+		case NID_secp521r1:
+			return "nistp521";
+		}
+	}
 	}
 	return "ssh-unknown";
 }
@@ -567,6 +644,18 @@ pamsshagentauth_key_size(const Key *k)
 		return BN_num_bits(k->rsa->n);
 	case KEY_DSA:
 		return BN_num_bits(k->dsa->p);
+	case KEY_ECDSA:
+	{
+		int nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(k->ecdsa));
+		switch (nid) {
+		case NID_X9_62_prime256v1:
+			return 256;
+		case NID_secp384r1:
+			return 384;
+		case NID_secp521r1:
+			return 521;
+		}
+	}
 	}
 	return 0;
 }
@@ -596,6 +685,13 @@ dsa_generate_private_key(u_int bits)
 	return private;
 }
 
+static EC_KEY*
+ecdsa_generate_private_key(u_int bits)
+{
+	pamsshagentauth_fatal("ecdsa_generate_private_key: implement me");
+	return NULL;
+}
+
 Key *
 pamsshagentauth_key_generate(int type, u_int bits)
 {
@@ -607,6 +703,9 @@ pamsshagentauth_key_generate(int type, u_int bits)
 	case KEY_RSA:
 	case KEY_RSA1:
 		k->rsa = rsa_generate_private_key(bits);
+		break;
+	case KEY_ECDSA:
+		k->ecdsa = ecdsa_generate_private_key(bits);
 		break;
 	default:
 		pamsshagentauth_fatal("key_generate: unknown type %d", type);
@@ -635,6 +734,11 @@ pamsshagentauth_key_from_private(const Key *k)
 		    (BN_copy(n->rsa->e, k->rsa->e) == NULL))
 			pamsshagentauth_fatal("key_from_private: BN_copy failed");
 		break;
+	case KEY_ECDSA:
+		n = pamsshagentauth_key_new(k->type);
+		if (EC_KEY_copy(n->ecdsa, k->ecdsa) == NULL)
+			pamsshagentauth_fatal("key_from_private: EC_KEY_copy failed");
+		break;
 	default:
 		pamsshagentauth_fatal("key_from_private: unknown type %d", k->type);
 		break;
@@ -655,9 +759,27 @@ pamsshagentauth_key_type_from_name(char *name)
 		return KEY_RSA;
 	} else if (strcmp(name, "ssh-dss") == 0) {
 		return KEY_DSA;
+	} else if (strncmp(name, "ecdsa-sha2", 10) == 0) {
+		return KEY_ECDSA;
 	}
 	pamsshagentauth_verbose("key_type_from_name: unknown key type '%s'", name);
 	return KEY_UNSPEC;
+}
+
+int
+pamsshagentauth_ec_group_from_name(char *name)
+{
+	// if we get "ecdsa-sha2-" advance past the ecdsa-sha2- bit
+	if (strlen(name) > 11)
+		name += 11;
+	if (strcmp(name, "nistp256") == 0) {
+		return NID_X9_62_prime256v1;
+	} else if (strcmp(name, "nistp384") == 0) {
+		return NID_secp384r1;
+	} else if (strcmp(name, "nistp521") == 0) {
+		return NID_secp521r1;
+	}
+	return -1;
 }
 
 int
@@ -731,6 +853,64 @@ pamsshagentauth_key_from_blob(const u_char *blob, u_int blen)
 		DSA_print_fp(stderr, key->dsa, 8);
 #endif
 		break;
+	case KEY_ECDSA:
+	{
+		// RFC 5656
+		EC_KEY *ecdsa = NULL;
+		EC_POINT *p = NULL;
+		char *identifier = NULL;
+		u_int len = 0;
+		void *octets = NULL;
+
+		identifier = pamsshagentauth_buffer_get_string_ret(&b, NULL);
+
+		key = pamsshagentauth_key_new(type);
+		if ((ecdsa = EC_KEY_new_by_curve_name(pamsshagentauth_ec_group_from_name(identifier))) == NULL) {
+			pamsshagentauth_logerror("key_from_blob: can't create EC KEY");
+			pamsshagentauth_key_free(key);
+			key = NULL;
+			goto out;
+		}
+		key->ecdsa = ecdsa;
+
+		if ((octets = pamsshagentauth_buffer_get_string_ret(&b, &len)) == NULL || len == 0) {
+			pamsshagentauth_logerror("key_from_blob: can't get octets from buffer");
+			pamsshagentauth_key_free(key);
+			key = NULL;
+			goto out;
+		}
+
+		if ((p = EC_POINT_new(EC_KEY_get0_group(key->ecdsa))) == NULL) {
+			pamsshagentauth_logerror("key_from_blob: can't create EC POINT");
+			pamsshagentauth_xfree(octets);
+			pamsshagentauth_key_free(key);
+			key = NULL;
+			goto out;
+		}
+
+		if (EC_POINT_oct2point(EC_KEY_get0_group(key->ecdsa), p, octets, len, NULL) == -1) {
+			pamsshagentauth_logerror("key_from_blob: can't read ecdsa key");
+			EC_POINT_free(p);
+			pamsshagentauth_xfree(octets);
+			pamsshagentauth_key_free(key);
+			key = NULL;
+			goto out;
+		}
+
+		EC_KEY_set_public_key(key->ecdsa, p);
+		EC_POINT_free(p);
+
+		if (!EC_KEY_check_key(key->ecdsa)) {
+			pamsshagentauth_logerror("key_from_blob: ecdsa key invalid");
+			pamsshagentauth_key_free(key);
+			key = NULL;
+			goto out;
+		}
+#ifdef DEBUG_PK
+		EC_KEY_print_fp(stderr, key->ecdsa, 8);
+#endif
+		break;
+	}
 	case KEY_UNSPEC:
 		key = pamsshagentauth_key_new(type);
 		break;
@@ -772,6 +952,29 @@ pamsshagentauth_key_to_blob(const Key *key, u_char **blobp, u_int *lenp)
 		pamsshagentauth_buffer_put_bignum2(&b, key->rsa->e);
 		pamsshagentauth_buffer_put_bignum2(&b, key->rsa->n);
 		break;
+	case KEY_ECDSA:
+	{
+		size_t l = 0;
+		u_char buf[CB_MAX_ECPOINT];
+
+		pamsshagentauth_buffer_put_cstring(&b, key_ssh_name(key));
+		pamsshagentauth_buffer_put_cstring(&b, group_ssh_name(key));
+
+		if ((l = EC_POINT_point2oct(EC_KEY_get0_group(key->ecdsa),
+									EC_KEY_get0_public_key(key->ecdsa),
+									POINT_CONVERSION_UNCOMPRESSED,
+									NULL, 0, NULL)) == 0 ||
+			(l = EC_POINT_point2oct(EC_KEY_get0_group(key->ecdsa),
+									EC_KEY_get0_public_key(key->ecdsa),
+									POINT_CONVERSION_UNCOMPRESSED,
+									buf, l, NULL)) == 0 ) {
+			pamsshagentauth_logerror("key_to_blob: failed to deserialize point");
+			return 0;
+		}
+		pamsshagentauth_buffer_put_string(&b, buf, l);
+		bzero(buf, l);
+		break;
+	}
 	default:
 		pamsshagentauth_logerror("key_to_blob: unsupported key type %d", key->type);
 		pamsshagentauth_buffer_free(&b);
@@ -800,6 +1003,8 @@ pamsshagentauth_key_sign(
 		return ssh_dss_sign(key, sigp, lenp, data, datalen);
 	case KEY_RSA:
 		return ssh_rsa_sign(key, sigp, lenp, data, datalen);
+	case KEY_ECDSA:
+		return ssh_ecdsa_sign(key, sigp, lenp, data, datalen);
 	default:
 		pamsshagentauth_logerror("key_sign: invalid key type %d", key->type);
 		return -1;
@@ -824,6 +1029,8 @@ pamsshagentauth_key_verify(
 		return ssh_dss_verify(key, signature, signaturelen, data, datalen);
 	case KEY_RSA:
 		return ssh_rsa_verify(key, signature, signaturelen, data, datalen);
+	case KEY_ECDSA:
+		return ssh_ecdsa_verify(key, signature, signaturelen, data, datalen);
 	default:
 		pamsshagentauth_logerror("key_verify: invalid key type %d", key->type);
 		return -1;
@@ -841,6 +1048,7 @@ pamsshagentauth_key_demote(const Key *k)
 	pk->flags = k->flags;
 	pk->dsa = NULL;
 	pk->rsa = NULL;
+	pk->ecdsa = NULL;
 
 	switch (k->type) {
 	case KEY_RSA1:
@@ -863,6 +1071,9 @@ pamsshagentauth_key_demote(const Key *k)
 			pamsshagentauth_fatal("key_demote: BN_dup failed");
 		if ((pk->dsa->pub_key = BN_dup(k->dsa->pub_key)) == NULL)
 			pamsshagentauth_fatal("key_demote: BN_dup failed");
+		break;
+	case KEY_ECDSA:
+		pamsshagentauth_fatal("key_demote: implement me");
 		break;
 	default:
 		pamsshagentauth_fatal("key_free: bad key type %d", k->type);
