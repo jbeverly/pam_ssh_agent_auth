@@ -44,6 +44,7 @@
 
 #include <openssl/evp.h>
 #include <openbsd-compat/openssl-compat.h>
+#include <openssl/rand.h>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -64,11 +65,13 @@ pamsshagentauth_key_new(int type)
 	Key *k;
 	RSA *rsa;
 	DSA *dsa;
+	ED25519 *ed25519;
 	k = pamsshagentauth_xcalloc(1, sizeof(*k));
 	k->type = type;
 	k->dsa = NULL;
 	k->rsa = NULL;
 	k->ecdsa = NULL;
+	k->ed25519 = NULL;
 	switch (k->type) {
 	case KEY_RSA1:
 	case KEY_RSA:
@@ -95,6 +98,10 @@ pamsshagentauth_key_new(int type)
 		break;
 	case KEY_ECDSA:
 		// do nothing until we know which group
+		break;
+	case KEY_ED25519:
+		ed25519 = (ED25519*)pamsshagentauth_xcalloc(1, sizeof(ED25519));
+		k->ed25519 = ed25519;
 		break;
 	case KEY_UNSPEC:
 		break;
@@ -133,6 +140,9 @@ pamsshagentauth_key_new_private(int type)
 		if (EC_KEY_set_private_key(k->ecdsa, BN_new()) != 1)
 			pamsshagentauth_fatal("key_new_private: EC_KEY_set_private_key failed");
 		break;
+	case KEY_ED25519:
+		RAND_bytes(k->ed25519->sk, sizeof(k->ed25519->sk));
+		break;
 	case KEY_UNSPEC:
 		break;
 	default:
@@ -163,6 +173,11 @@ pamsshagentauth_key_free(Key *k)
 			EC_KEY_free(k->ecdsa);
 		k->ecdsa = NULL;
 		break;
+	case KEY_ED25519:
+		if (k->ed25519 != NULL)
+			pamsshagentauth_xfree(k->ed25519);
+		k->ed25519 = NULL;
+		break;
 	case KEY_UNSPEC:
 		break;
 	default:
@@ -190,7 +205,6 @@ pamsshagentauth_key_equal(const Key *a, const Key *b)
 		    BN_cmp(a->dsa->g, b->dsa->g) == 0 &&
 		    BN_cmp(a->dsa->pub_key, b->dsa->pub_key) == 0;
 	case KEY_ECDSA:
-	{
 		return a->ecdsa != NULL && b->ecdsa != NULL &&
 			EC_KEY_check_key(a->ecdsa) == 1 &&
 			EC_KEY_check_key(b->ecdsa) == 1 &&
@@ -201,7 +215,12 @@ pamsshagentauth_key_equal(const Key *a, const Key *b)
 				EC_KEY_get0_public_key(b->ecdsa), NULL) == 0 &&
 			BN_cmp(EC_KEY_get0_private_key(a->ecdsa),
 				EC_KEY_get0_private_key(b->ecdsa)) == 0;
-	}
+	case KEY_ED25519:
+		return a->ed25519 != NULL && b->ed25519 != NULL &&
+			memcmp(a->ed25519->sk, b->ed25519->sk,
+				   sizeof(a->ed25519->sk)) == 0 &&
+			memcmp(a->ed25519->pk, b->ed25519->pk,
+				   sizeof(a->ed25519->pk)) == 0;
 	default:
 		pamsshagentauth_fatal("key_equal: bad key type %d", a->type);
 	}
@@ -243,6 +262,7 @@ pamsshagentauth_key_fingerprint_raw(const Key *k, enum fp_type dgst_type,
 		break;
 	case KEY_DSA:
 	case KEY_ECDSA:
+	case KEY_ED25519:
 	case KEY_RSA:
 		pamsshagentauth_key_to_blob(k, &blob, &len);
 		break;
@@ -448,6 +468,7 @@ pamsshagentauth_key_read(Key *ret, char **cpp)
 	case KEY_RSA:
 	case KEY_DSA:
 	case KEY_ECDSA:
+	case KEY_ED25519:
 		space = strchr(cp, ' ');
 		if (space == NULL) {
 			pamsshagentauth_verbose("key_read: missing whitespace");
@@ -523,6 +544,17 @@ pamsshagentauth_key_read(Key *ret, char **cpp)
 			EC_KEY_print_fp(stderr, ret->ecdsa, 8);
 #endif
 			break;
+		case (KEY_ED25519):
+			if (ret->ed25519 != NULL)
+				pamsshagentauth_xfree(ret->ed25519);
+			ret->ed25519 = k->ed25519;
+			k->ed25519 = NULL;
+			success = 1;
+#ifdef DEBUG_PK
+			pamsshagentauth_dump_base64(stderr, (u_char*)ret->ed25519,
+				sizeof(ret->ed25519));
+#endif
+			break;
 		}
 /*XXXX*/
 		pamsshagentauth_key_free(k);
@@ -587,6 +619,8 @@ pamsshagentauth_key_type(const Key *k)
 		return "DSA";
 	case KEY_ECDSA:
 		return "ECDSA";
+	case KEY_ED25519:
+		return "ED25519";
 	}
 	return "unknown";
 }
@@ -611,6 +645,8 @@ key_ssh_name(const Key *k)
 			return "ecdsa-sha2-nistp521";
 		}
 	}
+	case KEY_ED25519:
+		return "ssh-ed25519";
 	}
 	return "ssh-unknown";
 }
@@ -656,6 +692,8 @@ pamsshagentauth_key_size(const Key *k)
 			return 521;
 		}
 	}
+	case KEY_ED25519:
+		return 32;
 	}
 	return 0;
 }
@@ -692,6 +730,14 @@ ecdsa_generate_private_key(u_int bits)
 	return NULL;
 }
 
+static ED25519*
+ed25519_generate_private_key()
+{
+	ED25519 *k = (ED25519*)pamsshagentauth_xcalloc(1, sizeof(ED25519));
+	RAND_bytes(k->sk, sizeof(k->sk));
+	return k;
+}
+
 Key *
 pamsshagentauth_key_generate(int type, u_int bits)
 {
@@ -706,6 +752,9 @@ pamsshagentauth_key_generate(int type, u_int bits)
 		break;
 	case KEY_ECDSA:
 		k->ecdsa = ecdsa_generate_private_key(bits);
+		break;
+	case KEY_ED25519:
+		k->ed25519 = ed25519_generate_private_key();
 		break;
 	default:
 		pamsshagentauth_fatal("key_generate: unknown type %d", type);
@@ -739,6 +788,10 @@ pamsshagentauth_key_from_private(const Key *k)
 		if (EC_KEY_copy(n->ecdsa, k->ecdsa) == NULL)
 			pamsshagentauth_fatal("key_from_private: EC_KEY_copy failed");
 		break;
+	case KEY_ED25519:
+		n = pamsshagentauth_key_new(k->type);
+		memcpy(n->ed25519, k->ed25519, sizeof(ED25519));
+		break;
 	default:
 		pamsshagentauth_fatal("key_from_private: unknown type %d", k->type);
 		break;
@@ -761,6 +814,8 @@ pamsshagentauth_key_type_from_name(char *name)
 		return KEY_DSA;
 	} else if (strncmp(name, "ecdsa-sha2", 10) == 0) {
 		return KEY_ECDSA;
+	} else if (strcmp(name, "ssh-ed25519") == 0) {
+		return KEY_ED25519;
 	}
 	pamsshagentauth_verbose("key_type_from_name: unknown key type '%s'", name);
 	return KEY_UNSPEC;
@@ -911,6 +966,27 @@ pamsshagentauth_key_from_blob(const u_char *blob, u_int blen)
 #endif
 		break;
 	}
+	case KEY_ED25519:
+	{
+		u_int len = 0;
+		key = pamsshagentauth_key_new(type);
+		void *kbits = pamsshagentauth_buffer_get_string_ret(&b, &len);
+		if (len != pamsshagentauth_key_size(key)) {
+			pamsshagentauth_logerror("key_from_blob: ed25519 key invalid (%u bytes read)",
+				len);
+			pamsshagentauth_xfree(kbits);
+			pamsshagentauth_key_free(key);
+			key = NULL;
+			goto out;
+		}
+		memcpy(key->ed25519->pk, kbits, sizeof(key->ed25519->pk));
+		pamsshagentauth_xfree(kbits);
+#ifdef DEBUG_PK
+		pamsshagentauth_dump_base64(stderr, (u_char*)key->ed25519,
+			sizeof(key->ed25519));
+#endif
+		break;
+	}
 	case KEY_UNSPEC:
 		key = pamsshagentauth_key_new(type);
 		break;
@@ -975,6 +1051,10 @@ pamsshagentauth_key_to_blob(const Key *key, u_char **blobp, u_int *lenp)
 		bzero(buf, l);
 		break;
 	}
+	case KEY_ED25519:
+		pamsshagentauth_buffer_put_cstring(&b, key_ssh_name(key));
+		pamsshagentauth_buffer_put_string(&b, key->ed25519->pk, sizeof(key->ed25519->pk));
+		break;
 	default:
 		pamsshagentauth_logerror("key_to_blob: unsupported key type %d", key->type);
 		pamsshagentauth_buffer_free(&b);
@@ -1005,6 +1085,8 @@ pamsshagentauth_key_sign(
 		return ssh_rsa_sign(key, sigp, lenp, data, datalen);
 	case KEY_ECDSA:
 		return ssh_ecdsa_sign(key, sigp, lenp, data, datalen);
+	case KEY_ED25519:
+		return ssh_ed25519_sign(key, sigp, lenp, data, datalen);
 	default:
 		pamsshagentauth_logerror("key_sign: invalid key type %d", key->type);
 		return -1;
@@ -1031,6 +1113,8 @@ pamsshagentauth_key_verify(
 		return ssh_rsa_verify(key, signature, signaturelen, data, datalen);
 	case KEY_ECDSA:
 		return ssh_ecdsa_verify(key, signature, signaturelen, data, datalen);
+	case KEY_ED25519:
+		return ssh_ed25519_verify(key, signature, signaturelen, data, datalen);
 	default:
 		pamsshagentauth_logerror("key_verify: invalid key type %d", key->type);
 		return -1;
@@ -1074,6 +1158,9 @@ pamsshagentauth_key_demote(const Key *k)
 		break;
 	case KEY_ECDSA:
 		pamsshagentauth_fatal("key_demote: implement me");
+		break;
+	case KEY_ED25519:
+		ed25519_publickey(k->ed25519->sk, k->ed25519->pk);
 		break;
 	default:
 		pamsshagentauth_fatal("key_free: bad key type %d", k->type);

@@ -30,6 +30,7 @@
 #include <openssl/dsa.h>
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
+#include "ed25519-donna/ed25519.h"
 
 typedef struct Key Key;
 enum types {
@@ -37,6 +38,7 @@ enum types {
 	KEY_RSA,
 	KEY_DSA,
 	KEY_ECDSA,
+	KEY_ED25519,
 	KEY_UNSPEC
 };
 enum fp_type {
@@ -54,12 +56,19 @@ enum fp_rep {
 /* key is stored in external hardware */
 #define KEY_FLAG_EXT		0x0001
 
+typedef struct ed25519 ED25519;
+struct ed25519 {
+	ed25519_public_key pk;
+	ed25519_secret_key sk;
+};
+
 struct Key {
 	int	 type;
 	int	 flags;
 	RSA	*rsa;
 	DSA	*dsa;
 	EC_KEY *ecdsa;
+	ED25519 *ed25519;
 };
 
 Key		*pamsshagentauth_key_new(int);
@@ -92,5 +101,7 @@ int	 ssh_rsa_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
 int	 ssh_rsa_verify(const Key *, const u_char *, u_int, const u_char *, u_int);
 int	 ssh_ecdsa_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
 int	 ssh_ecdsa_verify(const Key *, const u_char *, u_int, const u_char *, u_int);
+int	 ssh_ed25519_sign(const Key *, u_char **, u_int *, const u_char *, u_int);
+int	 ssh_ed25519_verify(const Key *, const u_char *, u_int, const u_char *, u_int);
 
 #endif

@@ -70,7 +70,9 @@ INSTALL_SSH_RAND_HELPER=@INSTALL_SSH_RAND_HELPER@
 
 PAM_MODULES=pam_ssh_agent_auth.so
 
-SSHOBJS=xmalloc.o atomicio.o authfd.o bufaux.o bufbn.o buffer.o cleanup.o entropy.o fatal.o key.o log.o misc.o secure_filename.o ssh-dss.o ssh-ecdsa.o ssh-rsa.o uuencode.o compat.o uidswap.o
+SSHOBJS=xmalloc.o atomicio.o authfd.o bufaux.o bufbn.o buffer.o cleanup.o entropy.o fatal.o key.o log.o misc.o secure_filename.o ssh-dss.o ssh-ecdsa.o ssh-ed25519.o ssh-rsa.o uuencode.o compat.o uidswap.o
+
+ED25519OBJS=ed25519-donna/ed25519.o
 
 PAM_SSH_AGENT_AUTH_OBJS=pam_user_key_allowed2.o iterate_ssh_agent_keys.o userauth_pubkey_from_id.o pam_user_authorized_keys.o get_command_line.o
 
@@ -84,23 +86,24 @@ MANTYPE		= @MANTYPE@
 
 all: $(MANPAGES) $(PAM_MODULES)
 
+$(ED25519OBJS): Makefile.in config.h
 $(SSHOBJS): Makefile.in config.h
 $(PAM_SSH_AGENT_AUTH_OBJS): Makefile.in config.h
 $(PAM_MODULES): Makefile.in config.h
 
 .c.o:
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 LIBCOMPAT=openbsd-compat/libopenbsd-compat.a
 $(LIBCOMPAT): always
 	(cd openbsd-compat && $(MAKE))
 always:
 
-pam_ssh_agent_auth.so: $(LIBCOMPAT) $(SSHOBJS) $(PAM_SSH_AGENT_AUTH_OBJS)  pam_ssh_agent_auth.o
-	$(LD) $(LDFLAGS_SHARED) -o $@ $(SSHOBJS) $(PAM_SSH_AGENT_AUTH_OBJS) $(LDFLAGS) -lopenbsd-compat pam_ssh_agent_auth.o $(LIBS) -lpam
+pam_ssh_agent_auth.so: $(LIBCOMPAT) $(SSHOBJS) $(ED25519OBJS) $(PAM_SSH_AGENT_AUTH_OBJS)  pam_ssh_agent_auth.o
+	$(LD) $(LDFLAGS_SHARED) -o $@ $(SSHOBJS) $(ED25519OBJS) $(PAM_SSH_AGENT_AUTH_OBJS) $(LDFLAGS) -lopenbsd-compat pam_ssh_agent_auth.o $(LIBS) -lpam
 
 $(MANPAGES): $(MANPAGES_IN)
-	pod2man --section=8 --release=v0.10.2 --name=pam_ssh_agent_auth --official --center "PAM" pam_ssh_agent_auth.pod > pam_ssh_agent_auth.8
+	pod2man --section=8 --release=v0.10.3 --name=pam_ssh_agent_auth --official --center "PAM" pam_ssh_agent_auth.pod > pam_ssh_agent_auth.8
 
 clean:	regressclean
 	rm -f *.o *.a $(PAM_MODULES) logintest config.cache config.log
@@ -111,9 +114,9 @@ clean:	regressclean
 
 distclean:	regressclean
 	rm -f *.o *.a $(PAM_MODULES) logintest config.cache config.log
-	rm -f *.out core 
+	rm -f *.out core
 	rm -f Makefile config.h config.status
-	rm -f openbsd-compat/regress/Makefile *~ 
+	rm -f openbsd-compat/regress/Makefile *~
 	rm -rf autom4te.cache
 	rm -f pam_ssh_agent_auth.8
 	(cd openbsd-compat && $(MAKE) distclean)
@@ -140,9 +143,9 @@ distprep: catman-do
 	$(AUTORECONF)
 	-rm -rf autom4te.cache
 
-install: $(CONFIGFILES) $(MANPAGES) $(PAM_MODULES) install-files 
+install: $(CONFIGFILES) $(MANPAGES) $(PAM_MODULES) install-files
 
-install-files: 
+install-files:
 	$(srcdir)/mkinstalldirs $(DESTDIR)$(libexecdir)
 	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)/$(mansubdir)8
 	$(INSTALL) -m 644 pam_ssh_agent_auth.8 $(DESTDIR)$(mandir)/$(mansubdir)8/pam_ssh_agent_auth.8

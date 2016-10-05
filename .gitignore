@@ -1,0 +1,10 @@
+Makefile
+config.h
+config.log
+config.status
+openbsd-compat/libopenbsd-compat.a
+pam_ssh_agent_auth.8
+pam_ssh_agent_auth.so
+*.sublime-project
+*.sublime-workspace
+*.o
