@@ -61,7 +61,7 @@ pamsshagentauth_uudecode(const char *src, u_char *target, size_t targsize)
 }
 
 void
-pamsshagentauth_dump_base64(FILE *fp, u_char *data, u_int len)
+pamsshagentauth_dump_base64(FILE *fp, const u_char *data, u_int len)
 {
 	char *buf;
 	int i, n;
