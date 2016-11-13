@@ -100,8 +100,7 @@ pamsshagentauth_key_new(int type)
 		// do nothing until we know which group
 		break;
 	case KEY_ED25519:
-		ed25519 = (ED25519*)pamsshagentauth_xcalloc(1, sizeof(ED25519));
-		k->ed25519 = ed25519;
+		k->ed25519 = pamsshagentauth_xcalloc(1, sizeof(*k->ed25519));
 		break;
 	case KEY_UNSPEC:
 		break;
@@ -733,7 +732,7 @@ ecdsa_generate_private_key(u_int bits)
 static ED25519*
 ed25519_generate_private_key()
 {
-	ED25519 *k = (ED25519*)pamsshagentauth_xcalloc(1, sizeof(ED25519));
+	ED25519 *k = pamsshagentauth_xcalloc(1, sizeof(*k)); 
 	RAND_bytes(k->sk, sizeof(k->sk));
 	return k;
 }
