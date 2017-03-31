@@ -144,8 +144,11 @@ ssh_get_authentication_socket(uid_t uid)
 	}
 
     errno = 0; 
-    seteuid(uid); /* To ensure a race condition is not used to circumvent the stat
-                     above, we will temporarily drop UID to the caller */
+    /* To ensure a race condition is not used to circumvent the stat
+       above, we will temporarily drop UID to the caller */
+    if (seteuid(uid) < 0)
+        return -1;
+
 	if (connect(sock, (struct sockaddr *)&sunaddr, sizeof sunaddr) < 0) {
 		close(sock);
         if(errno == EACCES)
@@ -153,7 +156,9 @@ ssh_get_authentication_socket(uid_t uid)
 		return -1;
 	}
 
-    seteuid(0); /* we now continue the regularly scheduled programming */
+    /* we now continue the regularly scheduled programming */
+    if (seteuid(0) < 0)
+        return -1;
 
 	agent_present = 1;
 	return sock;
