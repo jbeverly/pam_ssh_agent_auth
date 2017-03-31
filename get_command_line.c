@@ -42,7 +42,8 @@ proc_pid_cmdline(char *** inargv)
 {
     pid_t pid;
     FILE *f = NULL;
-    char filename[64] = { 0 }, c = '\0';
+    char filename[64] = { 0 };
+    int c = '\0';
     char ** argv;
     char argbuf[MAX_LEN_PER_CMDLINE_ARG + 1] = { 0 };
     size_t count = 0, len = 0;
