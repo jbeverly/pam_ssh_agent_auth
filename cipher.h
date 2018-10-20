@@ -59,15 +59,18 @@
 #define CIPHER_DECRYPT		0
 
 typedef struct Cipher Cipher;
-typedef struct CipherContext CipherContext;
+// typedef struct CipherContext CipherContext;
 
 struct Cipher;
+/*
 struct CipherContext {
 	int	plaintext;
 	EVP_CIPHER_CTX evp;
 	Cipher *cipher;
 };
+*/
 
+/*
 u_int	 cipher_mask_ssh1(int);
 Cipher	*cipher_by_name(const char *);
 Cipher	*cipher_by_number(int);
@@ -88,4 +91,5 @@ void	 cipher_set_keyiv(CipherContext *, u_char *);
 int	 cipher_get_keyiv_len(const CipherContext *);
 int	 cipher_get_keycontext(const CipherContext *, u_char *);
 void	 cipher_set_keycontext(CipherContext *, u_char *);
+*/
 #endif				/* CIPHER_H */

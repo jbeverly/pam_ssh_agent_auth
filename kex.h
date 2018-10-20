@@ -70,7 +70,7 @@ enum kex_exchange {
 #define KEX_INIT_SENT	0x0001
 
 typedef struct Kex Kex;
-typedef struct Mac Mac;
+// typedef struct Mac Mac;
 typedef struct Comp Comp;
 typedef struct Enc Enc;
 typedef struct Newkeys Newkeys;
@@ -84,6 +84,7 @@ struct Enc {
 	u_char	*key;
 	u_char	*iv;
 };
+/*
 struct Mac {
 	char	*name;
 	int	enabled;
@@ -95,11 +96,13 @@ struct Mac {
 	HMAC_CTX	evp_ctx;
 	struct umac_ctx *umac_ctx;
 };
+*/
 struct Comp {
 	int	type;
 	int	enabled;
 	char	*name;
 };
+/*
 struct Newkeys {
 	Enc	enc;
 	Mac	mac;
@@ -126,7 +129,9 @@ struct Kex {
 	int	(*host_key_index)(Key *);
 	void	(*kex[KEX_MAX])(Kex *);
 };
+*/
 
+/*
 Kex	*kex_setup(char *[PROPOSAL_MAX]);
 void	 kex_finish(Kex *);
 
@@ -151,6 +156,8 @@ kexgex_hash(const EVP_MD *, char *, char *, char *, int, char *,
 
 void
 derive_ssh1_session_id(BIGNUM *, BIGNUM *, u_int8_t[8], u_int8_t[16]);
+
+*/
 
 #if defined(DEBUG_KEX) || defined(DEBUG_KEXDH)
 void	dump_digest(char *, u_char *, int);
