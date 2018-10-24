@@ -119,13 +119,13 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		pamsshagentauth_logerror("ssh_rsa_verify: no RSA key");
 		return -1;
 	}
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 	if (BN_num_bits(key->rsa->n) < SSH_RSA_MINIMUM_MODULUS_SIZE) {
 #else
 	if (BN_num_bits(RSA_get0_n(key->rsa)) < SSH_RSA_MINIMUM_MODULUS_SIZE) {
 #endif
 		pamsshagentauth_logerror("ssh_rsa_verify: RSA modulus too small: %d < minimum %d bits",
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		    BN_num_bits(key->rsa->n), SSH_RSA_MINIMUM_MODULUS_SIZE);
 #else
 		    BN_num_bits(RSA_get0_n(key->rsa)), SSH_RSA_MINIMUM_MODULUS_SIZE);

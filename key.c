@@ -77,7 +77,7 @@ pamsshagentauth_key_new(int type)
 	case KEY_RSA:
 		if ((rsa = RSA_new()) == NULL)
 			pamsshagentauth_fatal("key_new: RSA_new failed");
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if ((rsa->n = BN_new()) == NULL)
 			pamsshagentauth_fatal("key_new: BN_new failed");
 		if ((rsa->e = BN_new()) == NULL)
@@ -91,7 +91,7 @@ pamsshagentauth_key_new(int type)
 	case KEY_DSA:
 		if ((dsa = DSA_new()) == NULL)
 			pamsshagentauth_fatal("key_new: DSA_new failed");
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if ((dsa->p = BN_new()) == NULL)
 			pamsshagentauth_fatal("key_new: BN_new failed");
 		if ((dsa->q = BN_new()) == NULL)
@@ -130,7 +130,7 @@ pamsshagentauth_key_new_private(int type)
 	switch (k->type) {
 	case KEY_RSA1:
 	case KEY_RSA:
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if ((k->rsa->d = BN_new()) == NULL)
 			pamsshagentauth_fatal("key_new_private: BN_new failed");
 		if ((k->rsa->iqmp = BN_new()) == NULL)
@@ -153,7 +153,7 @@ pamsshagentauth_key_new_private(int type)
 #endif
 		break;
 	case KEY_DSA:
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if ((k->dsa->priv_key = BN_new()) == NULL)
 			pamsshagentauth_fatal("key_new_private: BN_new failed");
 #else
@@ -162,7 +162,7 @@ pamsshagentauth_key_new_private(int type)
 #endif
 		break;
 	case KEY_ECDSA:
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if (EC_KEY_set_private_key(k->ecdsa, BN_new()) != 1)
 			pamsshagentauth_fatal("key_new_private: EC_KEY_set_private_key failed");
 #else
@@ -224,7 +224,7 @@ pamsshagentauth_key_equal(const Key *a, const Key *b)
 	case KEY_RSA1:
 	case KEY_RSA:
 		return a->rsa != NULL && b->rsa != NULL &&
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		    BN_cmp(a->rsa->e, b->rsa->e) == 0 &&
 		    BN_cmp(a->rsa->n, b->rsa->n) == 0;
 #else
@@ -233,7 +233,7 @@ pamsshagentauth_key_equal(const Key *a, const Key *b)
 #endif
 	case KEY_DSA:
 		return a->dsa != NULL && b->dsa != NULL &&
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		    BN_cmp(a->dsa->p, b->dsa->p) == 0 &&
 		    BN_cmp(a->dsa->q, b->dsa->q) == 0 &&
 		    BN_cmp(a->dsa->g, b->dsa->g) == 0 &&
@@ -293,7 +293,7 @@ pamsshagentauth_key_fingerprint_raw(const Key *k, enum fp_type dgst_type,
 	}
 	switch (k->type) {
 	case KEY_RSA1:
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		nlen = BN_num_bytes(k->rsa->n);
 		elen = BN_num_bytes(k->rsa->e);
 		len = nlen + elen;
@@ -510,7 +510,7 @@ pamsshagentauth_key_read(Key *ret, char **cpp)
 			return -1;
 		*cpp = cp;
 		/* Get public exponent, public modulus. */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if (!read_bignum(cpp, ret->rsa->e))
 			return -1;
 		if (!read_bignum(cpp, ret->rsa->n))
@@ -643,7 +643,7 @@ pamsshagentauth_key_write(const Key *key, FILE *f)
 
 	if (key->type == KEY_RSA1 && key->rsa != NULL) {
 		/* size of modulus 'n' */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		bits = BN_num_bits(key->rsa->n);
 		fprintf(f, "%u", bits);
 		if (write_bignum(f, key->rsa->e) &&
@@ -742,7 +742,7 @@ pamsshagentauth_key_size(const Key *k)
 {
 	switch (k->type) {
 	case KEY_RSA1:
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 	case KEY_RSA:
 		return BN_num_bits(k->rsa->n);
 	case KEY_DSA:
@@ -843,7 +843,7 @@ pamsshagentauth_key_from_private(const Key *k)
 	switch (k->type) {
 	case KEY_DSA:
 		n = pamsshagentauth_key_new(k->type);
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if ((BN_copy(n->dsa->p, k->dsa->p) == NULL) ||
 		    (BN_copy(n->dsa->q, k->dsa->q) == NULL) ||
 		    (BN_copy(n->dsa->g, k->dsa->g) == NULL) ||
@@ -859,7 +859,7 @@ pamsshagentauth_key_from_private(const Key *k)
 	case KEY_RSA:
 	case KEY_RSA1:
 		n = pamsshagentauth_key_new(k->type);
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if ((BN_copy(n->rsa->n, k->rsa->n) == NULL) ||
 		    (BN_copy(n->rsa->e, k->rsa->e) == NULL))
 #else
@@ -967,7 +967,7 @@ pamsshagentauth_key_from_blob(const u_char *blob, u_int blen)
 	switch (type) {
 	case KEY_RSA:
 		key = pamsshagentauth_key_new(type);
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if (pamsshagentauth_buffer_get_bignum2_ret(&b, key->rsa->e) == -1 ||
 		    pamsshagentauth_buffer_get_bignum2_ret(&b, key->rsa->n) == -1) {
 #else
@@ -985,7 +985,7 @@ pamsshagentauth_key_from_blob(const u_char *blob, u_int blen)
 		break;
 	case KEY_DSA:
 		key = pamsshagentauth_key_new(type);
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if (pamsshagentauth_buffer_get_bignum2_ret(&b, key->dsa->p) == -1 ||
 		    pamsshagentauth_buffer_get_bignum2_ret(&b, key->dsa->q) == -1 ||
 		    pamsshagentauth_buffer_get_bignum2_ret(&b, key->dsa->g) == -1 ||
@@ -1113,7 +1113,7 @@ pamsshagentauth_key_to_blob(const Key *key, u_char **blobp, u_int *lenp)
 	}
 	pamsshagentauth_buffer_init(&b);
 	switch (key->type) {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 	case KEY_DSA:
 		pamsshagentauth_buffer_put_cstring(&b, key_ssh_name(key));
 		pamsshagentauth_buffer_put_bignum2(&b, key->dsa->p);
@@ -1251,7 +1251,7 @@ pamsshagentauth_key_demote(const Key *k)
 	case KEY_RSA:
 		if ((pk->rsa = RSA_new()) == NULL)
 			pamsshagentauth_fatal("key_demote: RSA_new failed");
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if ((pk->rsa->e = BN_dup(k->rsa->e)) == NULL)
 			pamsshagentauth_fatal("key_demote: BN_dup failed");
 		if ((pk->rsa->n = BN_dup(k->rsa->n)) == NULL)
@@ -1264,7 +1264,7 @@ pamsshagentauth_key_demote(const Key *k)
 	case KEY_DSA:
 		if ((pk->dsa = DSA_new()) == NULL)
 			pamsshagentauth_fatal("key_demote: DSA_new failed");
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		if ((pk->dsa->p = BN_dup(k->dsa->p)) == NULL)
 			pamsshagentauth_fatal("key_demote: BN_dup failed");
 		if ((pk->dsa->q = BN_dup(k->dsa->q)) == NULL)

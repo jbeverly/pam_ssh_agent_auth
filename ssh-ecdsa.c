@@ -45,7 +45,7 @@ ssh_ecdsa_sign(const Key *key, u_char **sigp, u_int *lenp,
     u_char digest[EVP_MAX_MD_SIZE];
     u_int len, dlen;
     Buffer b, bb;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100005L
 	BIGNUM *r, *s;
 #endif
 
@@ -69,7 +69,7 @@ ssh_ecdsa_sign(const Key *key, u_char **sigp, u_int *lenp,
     }
 
     pamsshagentauth_buffer_init(&bb);
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
     if (pamsshagentauth_buffer_get_bignum2_ret(&bb, sig->r) == -1 ||
         pamsshagentauth_buffer_get_bignum2_ret(&bb, sig->s) == -1) {
 #else
@@ -110,7 +110,7 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
     u_int len, dlen;
     int rlen, ret;
     Buffer b;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100005L
 	BIGNUM *r, *s;
 #endif
 
@@ -141,7 +141,7 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 
     pamsshagentauth_buffer_init(&b);
     pamsshagentauth_buffer_append(&b, sigblob, len);
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
     if ((pamsshagentauth_buffer_get_bignum2_ret(&b, sig->r) == -1) ||
         (pamsshagentauth_buffer_get_bignum2_ret(&b, sig->s) == -1))
 #else
