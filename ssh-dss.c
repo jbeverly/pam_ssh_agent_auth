@@ -48,37 +48,53 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 {
 	DSA_SIG *sig;
 	const EVP_MD *evp_md = EVP_sha1();
-	EVP_MD_CTX md;
+	EVP_MD_CTX *md;
 	u_char digest[EVP_MAX_MD_SIZE], sigblob[SIGBLOB_LEN];
 	u_int rlen, slen, len, dlen;
 	Buffer b;
+#if OPENSSL_VERSION_NUMBER >= 0x10100005L
+	const BIGNUM *r, *s;
+#endif
 
 	if (key == NULL || key->type != KEY_DSA || key->dsa == NULL) {
 		pamsshagentauth_logerror("ssh_dss_sign: no DSA key");
 		return -1;
 	}
-	EVP_DigestInit(&md, evp_md);
-	EVP_DigestUpdate(&md, data, datalen);
-	EVP_DigestFinal(&md, digest, &dlen);
+	md = EVP_MD_CTX_create();
+	EVP_DigestInit(md, evp_md);
+	EVP_DigestUpdate(md, data, datalen);
+	EVP_DigestFinal(md, digest, &dlen);
 
 	sig = DSA_do_sign(digest, dlen, key->dsa);
 	memset(digest, 'd', sizeof(digest));
+	EVP_MD_CTX_destroy(md);
 
 	if (sig == NULL) {
 		pamsshagentauth_logerror("ssh_dss_sign: sign failed");
 		return -1;
 	}
 
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 	rlen = BN_num_bytes(sig->r);
 	slen = BN_num_bytes(sig->s);
+#else
+	DSA_SIG_get0((const DSA_SIG *)sig, (const BIGNUM **)r, (const BIGNUM **)s);
+	rlen = BN_num_bytes(r);
+	slen = BN_num_bytes(s);
+#endif
 	if (rlen > INTBLOB_LEN || slen > INTBLOB_LEN) {
 		pamsshagentauth_logerror("bad sig size %u %u", rlen, slen);
 		DSA_SIG_free(sig);
 		return -1;
 	}
 	memset(sigblob, 0, SIGBLOB_LEN);
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 	BN_bn2bin(sig->r, sigblob+ SIGBLOB_LEN - INTBLOB_LEN - rlen);
 	BN_bn2bin(sig->s, sigblob+ SIGBLOB_LEN - slen);
+#else
+	BN_bn2bin(r, sigblob+ SIGBLOB_LEN - INTBLOB_LEN - rlen);
+	BN_bn2bin(s, sigblob+ SIGBLOB_LEN - slen);
+#endif
 	DSA_SIG_free(sig);
 
 	if (datafellows & SSH_BUG_SIGBLOB) {
@@ -110,11 +126,14 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 {
 	DSA_SIG *sig;
 	const EVP_MD *evp_md = EVP_sha1();
-	EVP_MD_CTX md;
+	EVP_MD_CTX *md;
 	u_char digest[EVP_MAX_MD_SIZE], *sigblob;
 	u_int len, dlen;
 	int rlen, ret;
 	Buffer b;
+#if OPENSSL_VERSION_NUMBER >= 0x10100005L
+	BIGNUM *r, *s;
+#endif
 
 	if (key == NULL || key->type != KEY_DSA || key->dsa == NULL) {
 		pamsshagentauth_logerror("ssh_dss_verify: no DSA key");
@@ -157,6 +176,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	/* parse signature */
 	if ((sig = DSA_SIG_new()) == NULL)
 		pamsshagentauth_fatal("ssh_dss_verify: DSA_SIG_new failed");
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 	if ((sig->r = BN_new()) == NULL)
 		pamsshagentauth_fatal("ssh_dss_verify: BN_new failed");
 	if ((sig->s = BN_new()) == NULL)
@@ -164,18 +184,33 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	if ((BN_bin2bn(sigblob, INTBLOB_LEN, sig->r) == NULL) ||
 	    (BN_bin2bn(sigblob+ INTBLOB_LEN, INTBLOB_LEN, sig->s) == NULL))
 		pamsshagentauth_fatal("ssh_dss_verify: BN_bin2bn failed");
+#else
+	if ((r = BN_new()) == NULL)
+		pamsshagentauth_fatal("ssh_dss_verify: BN_new failed");
+	if ((s = BN_new()) == NULL)
+		pamsshagentauth_fatal("ssh_dss_verify: BN_new failed");
+	if (DSA_SIG_set0(sig, r, s) != 1)
+		pamsshagentauth_fatal("ssh_dss_verify: DSA_SIG_set0 failed");
+	if ((BN_bin2bn(sigblob, INTBLOB_LEN, r) == NULL) ||
+	    (BN_bin2bn(sigblob+ INTBLOB_LEN, INTBLOB_LEN, s) == NULL))
+		pamsshagentauth_fatal("ssh_dss_verify: BN_bin2bn failed");
+	if (DSA_SIG_set0(sig, r, s) != 1)
+		pamsshagentauth_fatal("ssh_dss_verify: DSA_SIG_set0 failed");
+#endif
 
 	/* clean up */
 	memset(sigblob, 0, len);
 	pamsshagentauth_xfree(sigblob);
 
 	/* sha1 the data */
-	EVP_DigestInit(&md, evp_md);
-	EVP_DigestUpdate(&md, data, datalen);
-	EVP_DigestFinal(&md, digest, &dlen);
+	md = EVP_MD_CTX_create();
+	EVP_DigestInit(md, evp_md);
+	EVP_DigestUpdate(md, data, datalen);
+	EVP_DigestFinal(md, digest, &dlen);
 
 	ret = DSA_do_verify(digest, dlen, sig, key->dsa);
 	memset(digest, 'd', sizeof(digest));
+	EVP_MD_CTX_destroy(md);
 
 	DSA_SIG_free(sig);
 

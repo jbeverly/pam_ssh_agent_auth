@@ -40,7 +40,7 @@ ssh_rsa_sign(const Key *key, u_char **sigp, u_int *lenp,
     const u_char *data, u_int datalen)
 {
 	const EVP_MD *evp_md;
-	EVP_MD_CTX md;
+	EVP_MD_CTX *md;
 	u_char digest[EVP_MAX_MD_SIZE], *sig;
 	u_int slen, dlen, len;
 	int ok, nid;
@@ -55,6 +55,7 @@ ssh_rsa_sign(const Key *key, u_char **sigp, u_int *lenp,
 		pamsshagentauth_logerror("ssh_rsa_sign: EVP_get_digestbynid %d failed", nid);
 		return -1;
 	}
+	md = EVP_MD_CTX_create();
 	EVP_DigestInit(&md, evp_md);
 	EVP_DigestUpdate(&md, data, datalen);
 	EVP_DigestFinal(&md, digest, &dlen);
@@ -64,6 +65,7 @@ ssh_rsa_sign(const Key *key, u_char **sigp, u_int *lenp,
 
 	ok = RSA_sign(nid, digest, dlen, sig, &len, key->rsa);
 	memset(digest, 'd', sizeof(digest));
+	EVP_MD_CTX_destroy(md);
 
 	if (ok != 1) {
 		int ecode = ERR_get_error();
@@ -107,7 +109,7 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 {
 	Buffer b;
 	const EVP_MD *evp_md;
-	EVP_MD_CTX md;
+	EVP_MD_CTX *md;
 	char *ktype;
 	u_char digest[EVP_MAX_MD_SIZE], *sigblob;
 	u_int len, dlen, modlen;
@@ -117,9 +119,17 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		pamsshagentauth_logerror("ssh_rsa_verify: no RSA key");
 		return -1;
 	}
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 	if (BN_num_bits(key->rsa->n) < SSH_RSA_MINIMUM_MODULUS_SIZE) {
+#else
+	if (BN_num_bits(RSA_get0_n(key->rsa)) < SSH_RSA_MINIMUM_MODULUS_SIZE) {
+#endif
 		pamsshagentauth_logerror("ssh_rsa_verify: RSA modulus too small: %d < minimum %d bits",
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
 		    BN_num_bits(key->rsa->n), SSH_RSA_MINIMUM_MODULUS_SIZE);
+#else
+		    BN_num_bits(RSA_get0_n(key->rsa)), SSH_RSA_MINIMUM_MODULUS_SIZE);
+#endif
 		return -1;
 	}
 	pamsshagentauth_buffer_init(&b);
@@ -161,12 +171,14 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		pamsshagentauth_xfree(sigblob);
 		return -1;
 	}
-	EVP_DigestInit(&md, evp_md);
-	EVP_DigestUpdate(&md, data, datalen);
-	EVP_DigestFinal(&md, digest, &dlen);
+	md = EVP_MD_CTX_create();
+	EVP_DigestInit(md, evp_md);
+	EVP_DigestUpdate(md, data, datalen);
+	EVP_DigestFinal(md, digest, &dlen);
 
 	ret = openssh_RSA_verify(nid, digest, dlen, sigblob, len, key->rsa);
 	memset(digest, 'd', sizeof(digest));
+	EVP_MD_CTX_destroy(md);
 	memset(sigblob, 's', len);
 	pamsshagentauth_xfree(sigblob);
 	pamsshagentauth_verbose("ssh_rsa_verify: signature %scorrect", (ret==0) ? "in" : "");

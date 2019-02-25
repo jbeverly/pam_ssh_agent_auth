@@ -41,22 +41,27 @@ ssh_ecdsa_sign(const Key *key, u_char **sigp, u_int *lenp,
 {
     ECDSA_SIG *sig;
     const EVP_MD *evp_md = evp_from_key(key);
-    EVP_MD_CTX md;
+    EVP_MD_CTX *md;
     u_char digest[EVP_MAX_MD_SIZE];
     u_int len, dlen;
     Buffer b, bb;
+#if OPENSSL_VERSION_NUMBER >= 0x10100005L
+	BIGNUM *r, *s;
+#endif
 
     if (key == NULL || key->type != KEY_ECDSA || key->ecdsa == NULL) {
         pamsshagentauth_logerror("ssh_ecdsa_sign: no ECDSA key");
         return -1;
     }
 
-    EVP_DigestInit(&md, evp_md);
-    EVP_DigestUpdate(&md, data, datalen);
-    EVP_DigestFinal(&md, digest, &dlen);
+    md = EVP_MD_CTX_create();
+    EVP_DigestInit(md, evp_md);
+    EVP_DigestUpdate(md, data, datalen);
+    EVP_DigestFinal(md, digest, &dlen);
 
     sig = ECDSA_do_sign(digest, dlen, key->ecdsa);
     memset(digest, 'd', sizeof(digest));
+    EVP_MD_CTX_destroy(md);
 
     if (sig == NULL) {
         pamsshagentauth_logerror("ssh_ecdsa_sign: sign failed");
@@ -64,8 +69,14 @@ ssh_ecdsa_sign(const Key *key, u_char **sigp, u_int *lenp,
     }
 
     pamsshagentauth_buffer_init(&bb);
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
     if (pamsshagentauth_buffer_get_bignum2_ret(&bb, sig->r) == -1 ||
         pamsshagentauth_buffer_get_bignum2_ret(&bb, sig->s) == -1) {
+#else
+    DSA_SIG_get0(sig, &r, &s);
+    if (pamsshagentauth_buffer_get_bignum2_ret(&bb, r) == -1 ||
+        pamsshagentauth_buffer_get_bignum2_ret(&bb, s) == -1) {
+#endif
         pamsshagentauth_logerror("couldn't serialize signature");
         ECDSA_SIG_free(sig);
         return -1;
@@ -94,11 +105,14 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 {
     ECDSA_SIG *sig;
     const EVP_MD *evp_md = evp_from_key(key);
-    EVP_MD_CTX md;
+    EVP_MD_CTX *md;
     u_char digest[EVP_MAX_MD_SIZE], *sigblob;
     u_int len, dlen;
     int rlen, ret;
     Buffer b;
+#if OPENSSL_VERSION_NUMBER >= 0x10100005L
+	BIGNUM *r, *s;
+#endif
 
     if (key == NULL || key->type != KEY_ECDSA || key->ecdsa == NULL) {
         pamsshagentauth_logerror("ssh_ecdsa_sign: no ECDSA key");
@@ -127,8 +141,14 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 
     pamsshagentauth_buffer_init(&b);
     pamsshagentauth_buffer_append(&b, sigblob, len);
+#if OPENSSL_VERSION_NUMBER < 0x10100005L
     if ((pamsshagentauth_buffer_get_bignum2_ret(&b, sig->r) == -1) ||
         (pamsshagentauth_buffer_get_bignum2_ret(&b, sig->s) == -1))
+#else
+    DSA_SIG_get0(sig, &r, &s);
+    if ((pamsshagentauth_buffer_get_bignum2_ret(&b, r) == -1) ||
+        (pamsshagentauth_buffer_get_bignum2_ret(&b, s) == -1))
+#endif
         pamsshagentauth_fatal("ssh_ecdsa_verify:"
             "pamsshagentauth_buffer_get_bignum2_ret failed");
 
@@ -137,12 +157,14 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
     pamsshagentauth_xfree(sigblob);
 
     /* sha256 the data */
-    EVP_DigestInit(&md, evp_md);
-    EVP_DigestUpdate(&md, data, datalen);
-    EVP_DigestFinal(&md, digest, &dlen);
+    md = EVP_MD_CTX_create();
+    EVP_DigestInit(md, evp_md);
+    EVP_DigestUpdate(md, data, datalen);
+    EVP_DigestFinal(md, digest, &dlen);
 
     ret = ECDSA_do_verify(digest, dlen, sig, key->ecdsa);
     memset(digest, 'd', sizeof(digest));
+    EVP_MD_CTX_destroy(md);
 
     ECDSA_SIG_free(sig);
 
