@@ -195,7 +195,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
          */
         const char* ssh_user_auth = pam_getenv(pamh, "SSH_AUTH_INFO_0");
         if (ssh_user_auth != NULL) {
-            pamsshagentauth_verbose("Got SSH_AUTH_INFO_0: `%.20s...%.20s'", ssh_user_auth, ssh_user_auth + (strlen(ssh_user_auth) - 20));
+            pamsshagentauth_verbose("Got SSH_AUTH_INFO_0: `%.20s...'", ssh_user_auth);
             if (userauth_pubkey_from_pam(ruser, ssh_user_auth) > 0) {
                 retval = PAM_SUCCESS;
                 pamsshagentauth_logit("Authenticated (sshd): `%s' as `%s' using %s", ruser, user, authorized_keys_file);
