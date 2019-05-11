@@ -40,26 +40,25 @@
 
 int userauth_pubkey_from_pam(const char* ruser, const char* ssh_auth_info) {
     int authenticated = 0;
-    const char* method = "publickey ";
+    const char method[] = "publickey ";
 
-    char* ai = strdup(ssh_auth_info);
+    char* ai = pamsshagentauth_xstrdup(ssh_auth_info);
     char* saveptr;
-    if (ai == NULL) {
-        return authenticated;
-    }
 
     char* auth_line = strtok_r(ai, "\n", &saveptr);
     while (auth_line != NULL) {
-        if (strncmp(auth_line, method, strlen(method)) == 0) {
-            char* key_str = auth_line + strlen(method);
+        if (strncmp(auth_line, method, sizeof(method) - 1) == 0) {
+            char* key_str = auth_line + sizeof(method) - 1;
             Key* key = pamsshagentauth_key_new(KEY_UNSPEC);
             if (key == NULL) {
                 continue;
             }
-            int r = 0;
-            if ((r = pamsshagentauth_key_read(key, &key_str)) == 1) {
+            int r = pamsshagentauth_key_read(key, &key_str);
+            if (r == 1) {
                 if (pam_user_key_allowed(ruser, key)) {
                     authenticated = 1;
+                    pamsshagentauth_key_free(key);
+                    break;
                 }
             } else {
                 pamsshagentauth_verbose("Failed to create key for %s: %d", auth_line, r);

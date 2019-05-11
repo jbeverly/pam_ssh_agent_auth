@@ -4,13 +4,16 @@ pam_ssh_agent_auth - PAM module for granting permissions based on SSH agent requ
 
 =head1 DESCRIPTION
 
-This module provides authentication via ssh-agent.  If an ssh-agent listening at SSH_AUTH_SOCK can successfully authenticate that it has the secret key for a public key in the specified file, authentication is granted, otherwise authentication fails.
+This module provides authentication via ssh keys.  If an ssh-agent listening at SSH_AUTH_SOCK can successfully authenticate that it has the secret key for a public key in the specified file, authentication is granted.  If the public key originally used to authenticate at sshd matches an authorized key, authentication succeeds.  Otherwise authentication fails.
 
 =head1 CONFIGURATION
+
+=head2 SUDO
 
 =over
 
 =item /etc/pam.d/sudo:
+
  auth	sufficient	pam_ssh_agent_auth.so file=/etc/security/authorized_keys
 
 =item /etc/sudoers:
@@ -24,6 +27,28 @@ This configuration would permit anyone who has an SSH_AUTH_SOCK that manages the
 
 Unlike NOPASSWD, this still requires an authentication, it's just that the authentication is provided by ssh-agent, and not password entry. 
 
+=head2 SSHD
+
+=over
+
+=item /etc/ssh/sshd_config:
+
+ PubkeyAuthentication yes
+ AuthenticationMethods publickey,keyboard-interactive:pam
+ PasswordAuthentication no
+ UsePAM yes
+
+=item /etc/pam.d/sshd:
+
+ auth required    pam_permit.so
+ auth	sufficient	pam_ssh_agent_auth.so file=/etc/security/super_authorized_keys
+ auth sufficient  pam_secondary_auth_method.so
+ ...
+ auth requisite   pam_deny.so
+
+=back
+
+This configuration would permit anyone who originally authenticated to sshd with a public key also found in /etc/security/super_authorized_keys to log in without having to complete other PAM auth methods. Anyone whose ssh key was accepted initially by sshd but whose key is not in the allowlist must complete another secondary PAM module such as OTP or else be denied.
 
 =head1 ARGUMENTS
 
@@ -132,7 +157,7 @@ For more information, please see http://linux.die.net/man/5/pam.d
 
  Copyright (c) 2008-2014, Jamie Beverly.
  And is based on openssh, and the included works by Markus Friedl, Darren Tucker,
- Todd C. Miller, Ben Lindstrom, Tim Rice, Damien Miller, and many others.
+ Todd C. Miller, Ben Lindstrom, Tim Rice, Damien Miller, Liz Fong-Jones, and many others.
 
  All rights reserved.
 

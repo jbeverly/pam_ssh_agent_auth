@@ -82,6 +82,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     char           *servicename = NULL;
     char           *authorized_keys_file_input = NULL;
     char            sudo_service_name[128] = "sudo";
+    char            sshd_service_name[128] = "sshd";
     char            ruser[128] = "";
 
     int             i = 0;
@@ -194,7 +195,8 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
          * Attempt to read data from the sshd if we're being called as an auth agent.
          */
         const char* ssh_user_auth = pam_getenv(pamh, "SSH_AUTH_INFO_0");
-        if (ssh_user_auth != NULL) {
+        int sshd_service = strncasecmp(servicename, sshd_service_name, sizeof(sshd_service_name) - 1);
+        if (sshd_service == 0 && ssh_user_auth != NULL) {
             pamsshagentauth_verbose("Got SSH_AUTH_INFO_0: `%.20s...'", ssh_user_auth);
             if (userauth_pubkey_from_pam(ruser, ssh_user_auth) > 0) {
                 retval = PAM_SUCCESS;
