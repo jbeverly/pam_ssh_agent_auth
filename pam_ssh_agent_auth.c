@@ -57,6 +57,7 @@
 #include "ssh.h"
 #include "pam_static_macros.h"
 #include "pam_user_authorized_keys.h"
+#include "userauth_pubkey_from_pam.h"
 
 #define strncasecmp_literal(A,B) strncasecmp( A, B, sizeof(B) - 1)
 #define UNUSED(expr) do { (void)(expr); } while (0)
@@ -81,6 +82,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     char           *servicename = NULL;
     char           *authorized_keys_file_input = NULL;
     char            sudo_service_name[128] = "sudo";
+    char            sshd_service_name[128] = "sshd";
     char            ruser[128] = "";
 
     int             i = 0;
@@ -190,10 +192,24 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         pamsshagentauth_verbose("Attempting authentication: `%s' as `%s' using %s", ruser, user, authorized_keys_file);
 
         /*
+         * Attempt to read data from the sshd if we're being called as an auth agent.
+         */
+        const char* ssh_user_auth = pam_getenv(pamh, "SSH_AUTH_INFO_0");
+        int sshd_service = strncasecmp(servicename, sshd_service_name, sizeof(sshd_service_name) - 1);
+        if (sshd_service == 0 && ssh_user_auth != NULL) {
+            pamsshagentauth_verbose("Got SSH_AUTH_INFO_0: `%.20s...'", ssh_user_auth);
+            if (userauth_pubkey_from_pam(ruser, ssh_user_auth) > 0) {
+                retval = PAM_SUCCESS;
+                pamsshagentauth_logit("Authenticated (sshd): `%s' as `%s' using %s", ruser, user, authorized_keys_file);
+                goto cleanexit;
+            }
+        }
+
+        /*
          * this pw_uid is used to validate the SSH_AUTH_SOCK, and so must be the uid of the ruser invoking the program, not the target-user
          */
         if(pamsshagentauth_find_authorized_keys(user, ruser, servicename)) { /* getpwnam(ruser)->pw_uid)) { */
-            pamsshagentauth_logit("Authenticated: `%s' as `%s' using %s", ruser, user, authorized_keys_file);
+            pamsshagentauth_logit("Authenticated (agent): `%s' as `%s' using %s", ruser, user, authorized_keys_file);
             retval = PAM_SUCCESS;
         } else {
             pamsshagentauth_logit("Failed Authentication: `%s' as `%s' using %s", ruser, user, authorized_keys_file);
