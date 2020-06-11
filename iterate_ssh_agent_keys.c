@@ -176,7 +176,7 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     return;
 }
 
-int
+const char *
 pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, const char * servicename)
 {
     Buffer session_id2 = { 0 };
@@ -184,7 +184,7 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
     Key *key;
     AuthenticationConnection *ac;
     char *comment;
-    uint8_t retval = 0;
+    const char *key_file = 0;
     uid_t uid = getpwnam(ruser)->pw_uid;
 
     OpenSSL_add_all_digests();
@@ -199,13 +199,11 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
                 id->key = key;
                 id->filename = comment;
                 id->ac = ac;
-                if(userauth_pubkey_from_id(ruser, id, &session_id2)) {
-                    retval = 1;
-                }
+                key_file = userauth_pubkey_from_id(ruser, id, &session_id2);
                 pamsshagentauth_xfree(id->filename);
                 pamsshagentauth_key_free(id->key);
                 pamsshagentauth_xfree(id);
-                if(retval == 1)
+                if(key_file)
                     break;
             }
         }
@@ -217,5 +215,5 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
     }
     /* pamsshagentauth_xfree(session_id2); */
     EVP_cleanup();
-    return retval;
+    return key_file;
 }
