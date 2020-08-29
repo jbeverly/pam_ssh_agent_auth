@@ -372,7 +372,7 @@ ssh_get_next_identity(AuthenticationConnection *auth, char **comment, int versio
 	case 1:
 		key = pamsshagentauth_key_new(KEY_RSA1);
 		bits = pamsshagentauth_buffer_get_int(&auth->identities);
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 		pamsshagentauth_buffer_get_bignum(&auth->identities, key->rsa->e);
 		pamsshagentauth_buffer_get_bignum(&auth->identities, key->rsa->n);
 		*comment = pamsshagentauth_buffer_get_string(&auth->identities, NULL);
@@ -432,7 +432,7 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 	}
 	pamsshagentauth_buffer_init(&buffer);
 	pamsshagentauth_buffer_put_char(&buffer, SSH_AGENTC_RSA_CHALLENGE);
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 	pamsshagentauth_buffer_put_int(&buffer, BN_num_bits(key->rsa->n));
 	pamsshagentauth_buffer_put_bignum(&buffer, key->rsa->e);
 	pamsshagentauth_buffer_put_bignum(&buffer, key->rsa->n);
@@ -517,7 +517,7 @@ ssh_agent_sign(AuthenticationConnection *auth,
 static void
 ssh_encode_identity_rsa1(Buffer *b, RSA *key, const char *comment)
 {
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 	pamsshagentauth_buffer_put_int(b, BN_num_bits(key->n));
 	pamsshagentauth_buffer_put_bignum(b, key->n);
 	pamsshagentauth_buffer_put_bignum(b, key->e);
@@ -545,7 +545,7 @@ ssh_encode_identity_ssh2(Buffer *b, Key *key, const char *comment)
 	pamsshagentauth_buffer_put_cstring(b, key_ssh_name(key));
 	switch (key->type) {
 	case KEY_RSA:
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 		pamsshagentauth_buffer_put_bignum2(b, key->rsa->n);
 		pamsshagentauth_buffer_put_bignum2(b, key->rsa->e);
 		pamsshagentauth_buffer_put_bignum2(b, key->rsa->d);
@@ -562,7 +562,7 @@ ssh_encode_identity_ssh2(Buffer *b, Key *key, const char *comment)
 #endif
 		break;
 	case KEY_DSA:
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 		pamsshagentauth_buffer_put_bignum2(b, key->dsa->p);
 		pamsshagentauth_buffer_put_bignum2(b, key->dsa->q);
 		pamsshagentauth_buffer_put_bignum2(b, key->dsa->g);
@@ -654,7 +654,7 @@ ssh_remove_identity(AuthenticationConnection *auth, Key *key)
 
 	if (key->type == KEY_RSA1) {
 		pamsshagentauth_buffer_put_char(&msg, SSH_AGENTC_REMOVE_RSA_IDENTITY);
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 		pamsshagentauth_buffer_put_int(&msg, BN_num_bits(key->rsa->n));
 		pamsshagentauth_buffer_put_bignum(&msg, key->rsa->e);
 		pamsshagentauth_buffer_put_bignum(&msg, key->rsa->n);

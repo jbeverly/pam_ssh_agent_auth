@@ -52,7 +52,7 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 	u_char digest[EVP_MAX_MD_SIZE], sigblob[SIGBLOB_LEN];
 	u_int rlen, slen, len, dlen;
 	Buffer b;
-#if OPENSSL_VERSION_NUMBER >= 0x10100005L
+#if OPENSSL_VERSION_NUMBER >= 0x10100005L && !defined(LIBRESSL_VERSION_NUMBER)
 	const BIGNUM *r, *s;
 #endif
 
@@ -74,7 +74,7 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 		return -1;
 	}
 
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 	rlen = BN_num_bytes(sig->r);
 	slen = BN_num_bytes(sig->s);
 #else
@@ -88,7 +88,7 @@ ssh_dss_sign(const Key *key, u_char **sigp, u_int *lenp,
 		return -1;
 	}
 	memset(sigblob, 0, SIGBLOB_LEN);
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 	BN_bn2bin(sig->r, sigblob+ SIGBLOB_LEN - INTBLOB_LEN - rlen);
 	BN_bn2bin(sig->s, sigblob+ SIGBLOB_LEN - slen);
 #else
@@ -131,7 +131,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	u_int len, dlen;
 	int rlen, ret;
 	Buffer b;
-#if OPENSSL_VERSION_NUMBER >= 0x10100005L
+#if OPENSSL_VERSION_NUMBER >= 0x10100005L && !defined(LIBRESSL_VERSION_NUMBER)
 	BIGNUM *r, *s;
 #endif
 
@@ -176,7 +176,7 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	/* parse signature */
 	if ((sig = DSA_SIG_new()) == NULL)
 		pamsshagentauth_fatal("ssh_dss_verify: DSA_SIG_new failed");
-#if OPENSSL_VERSION_NUMBER < 0x10100005L
+#if OPENSSL_VERSION_NUMBER < 0x10100005L || defined(LIBRESSL_VERSION_NUMBER)
 	if ((sig->r = BN_new()) == NULL)
 		pamsshagentauth_fatal("ssh_dss_verify: BN_new failed");
 	if ((sig->s = BN_new()) == NULL)
