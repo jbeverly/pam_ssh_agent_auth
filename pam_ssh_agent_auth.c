@@ -168,9 +168,19 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         pamsshagentauth_verbose("getpwnam(%s) failed, bailing out", ruser);
         goto cleanexit;
     }
-    if( ! getpwnam(user) ) {
+    if(! getpwnam(user) ) {
         pamsshagentauth_verbose("getpwnam(%s) failed, bailing out", user);
         goto cleanexit;
+    }
+
+    if(strcmp(ruser, user) == 0) {
+        pamsshagentauth_verbose("ruser and user are identical (%s), this is weird", ruser);
+        if (allow_user_owned_authorized_keys_file) {
+            pamsshagentauth_verbose(
+              "ruser and user are identical (%s) and 'allow_user_owned_authorized_keys_file' "
+              "is enabled at the same time. This grants the user arbitrary access, bailing out.", ruser);
+            goto cleanexit;
+        }
     }
 
     if(authorized_keys_file_input && user) {
