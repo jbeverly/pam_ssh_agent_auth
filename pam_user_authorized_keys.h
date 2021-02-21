@@ -28,11 +28,12 @@
  */
 
 
-#ifndef _PAM_USER_KEY_ALLOWED_H
-#define _PAM_USER_KEY_ALLOWED_H
+#ifndef _PAM_USER_AUTHORIZED_KEYS_H
+#define _PAM_USER_AUTHORIZED_KEYS_H
 
 #include "identity.h"
-int pam_user_key_allowed(const char *, Key *);
-void parse_authorized_key_file(const char *, const char *);
+const char * pam_user_key_allowed(const char *, Key *);
+void parse_authorized_key_files(const char *, const char *);
+void free_authorized_key_files();
 
 #endif

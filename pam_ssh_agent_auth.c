@@ -62,7 +62,6 @@
 #define strncasecmp_literal(A,B) strncasecmp( A, B, sizeof(B) - 1)
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
-char           *authorized_keys_file = NULL;
 uint8_t         allow_user_owned_authorized_keys_file = 0;
 char           *authorized_keys_command = NULL;
 char           *authorized_keys_command_user = NULL;
@@ -173,15 +172,13 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         goto cleanexit;
     }
 
-    if(authorized_keys_file_input && user) {
-        /*
-         * user is the name of the target-user, and so must be used for validating the authorized_keys file
-         */
-        parse_authorized_key_file(user, authorized_keys_file_input);
-    } else {
-        pamsshagentauth_verbose("Using default file=/etc/security/authorized_keys");
-        authorized_keys_file = pamsshagentauth_xstrdup("/etc/security/authorized_keys");
-    }
+    if (!authorized_keys_file_input || !user)
+        authorized_keys_file_input = "/etc/security/authorized_keys";
+
+    /*
+     * user is the name of the target-user, and so must be used for validating the authorized_keys file
+     */
+    parse_authorized_key_files(user, authorized_keys_file_input);
 
     /*
      * PAM_USER and PAM_RUSER do not necessarily have to get set by the calling application, and we may be unable to divine the latter.
@@ -189,7 +186,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
      */
 
     if(user && strlen(ruser) > 0) {
-        pamsshagentauth_verbose("Attempting authentication: `%s' as `%s' using %s", ruser, user, authorized_keys_file);
+        pamsshagentauth_verbose("Attempting authentication: `%s' as `%s' using %s", ruser, user, authorized_keys_file_input);
 
         /*
          * Attempt to read data from the sshd if we're being called as an auth agent.
@@ -200,7 +197,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
             pamsshagentauth_verbose("Got SSH_AUTH_INFO_0: `%.20s...'", ssh_user_auth);
             if (userauth_pubkey_from_pam(ruser, ssh_user_auth) > 0) {
                 retval = PAM_SUCCESS;
-                pamsshagentauth_logit("Authenticated (sshd): `%s' as `%s' using %s", ruser, user, authorized_keys_file);
+                pamsshagentauth_logit("Authenticated (sshd): `%s' as `%s' using %s", ruser, user, authorized_keys_file_input);
                 goto cleanexit;
             }
         }
@@ -208,11 +205,12 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         /*
          * this pw_uid is used to validate the SSH_AUTH_SOCK, and so must be the uid of the ruser invoking the program, not the target-user
          */
-        if(pamsshagentauth_find_authorized_keys(user, ruser, servicename)) { /* getpwnam(ruser)->pw_uid)) { */
-            pamsshagentauth_logit("Authenticated (agent): `%s' as `%s' using %s", ruser, user, authorized_keys_file);
+        const char *key_file;
+        if((key_file = pamsshagentauth_find_authorized_keys(user, ruser, servicename))) { /* getpwnam(ruser)->pw_uid)) { */
+            pamsshagentauth_logit("Authenticated (agent): `%s' as `%s' using %s", ruser, user, key_file);
             retval = PAM_SUCCESS;
         } else {
-            pamsshagentauth_logit("Failed Authentication: `%s' as `%s' using %s", ruser, user, authorized_keys_file);
+            pamsshagentauth_logit("Failed Authentication: `%s' as `%s' using %s", ruser, user, authorized_keys_file_input);
         }
     } else {
         pamsshagentauth_logit("No %s specified, cannot continue with this form of authentication", (user) ? "ruser" : "user" );
@@ -224,7 +222,7 @@ cleanexit:
     free(__progname);
 #endif
 
-    free(authorized_keys_file);
+    free_authorized_key_files();
 
     return retval;
 }

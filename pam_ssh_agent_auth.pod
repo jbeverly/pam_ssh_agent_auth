@@ -57,7 +57,7 @@ This configuration would permit anyone who originally authenticated to sshd with
 
 =item file=<path to authorized_keys>
 
-Specify the path to the authorized_keys file(s) you would like to use for authentication. Subject to tilde and % EXPANSIONS (below) 
+Specify the path(s) to the authorized_keys file(s) you would like to use for authentication. Subject to tilde and % EXPANSIONS (below). Paths are separated using colons.
 
 =item allow_user_owned_authorized_keys_file
 
