@@ -177,7 +177,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         /*
          * user is the name of the target-user, and so must be used for validating the authorized_keys file
          */
-        parse_authorized_key_file(user, authorized_keys_file_input);
+        parse_authorized_key_file(user, ruser, authorized_keys_file_input);
     } else {
         pamsshagentauth_verbose("Using default file=/etc/security/authorized_keys");
         authorized_keys_file = pamsshagentauth_xstrdup("/etc/security/authorized_keys");

@@ -91,7 +91,7 @@ extern uint8_t allow_user_owned_authorized_keys_file;
 uid_t authorized_keys_file_allowed_owner_uid;
 
 void
-parse_authorized_key_file(const char *user,
+parse_authorized_key_file(const char *user, const char *ruser,
                           const char *authorized_keys_file_input)
 {
     char fqdn[HOST_NAME_MAX] = "";
@@ -152,7 +152,7 @@ parse_authorized_key_file(const char *user,
     authorized_keys_file =
         pamsshagentauth_percent_expand(auth_keys_file_buf, "h",
                                        getpwnam(user)->pw_dir, "H", hostname,
-                                       "f", fqdn, "u", user, NULL);
+                                       "f", fqdn, "u", user, "r", ruser, NULL);
 }
 
 int

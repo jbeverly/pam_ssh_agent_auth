@@ -105,6 +105,12 @@ Automatically enables allow_user_owned_authorized_keys_file
 
 =item %u -- Username
 
+=item %r -- Remote Username
+
+Allows programs like su that set RUSER to the origin user and USER to the destination user, to name the key according to the user calling the program.
+
+The key file must belong to root or the target user. It must not be writable by the RUSER.
+
 =item %f -- FQDN
 
 =back 
