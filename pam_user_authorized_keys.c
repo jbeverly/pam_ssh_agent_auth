@@ -158,11 +158,12 @@ parse_authorized_key_file(const char *user,
 int
 pam_user_key_allowed(const char *ruser, Key * key)
 {
+    struct passwd *pw;
     return
-        pamsshagentauth_user_key_allowed2(getpwuid(authorized_keys_file_allowed_owner_uid),
-                                          key, authorized_keys_file)
-        || pamsshagentauth_user_key_allowed2(getpwuid(0), key,
-                                             authorized_keys_file)
+        ( (pw = getpwuid(authorized_keys_file_allowed_owner_uid)) &&
+            pamsshagentauth_user_key_allowed2(pw, key, authorized_keys_file))
+        || ((pw = getpwuid(0)) &&
+            pamsshagentauth_user_key_allowed2(pw, key, authorized_keys_file))
         || pamsshagentauth_user_key_command_allowed2(authorized_keys_command,
                                                      authorized_keys_command_user,
                                                      getpwnam(ruser), key);
