@@ -827,7 +827,7 @@ fmtfp (char *buffer, size_t *currlen, size_t maxlen,
 }
 #endif /* !defined(HAVE_SNPRINTF) || !defined(HAVE_VSNPRINTF) */
 
-#if !defined(HAVE_VSNPRINTF)
+#ifndef vsnprintf
 int
 vsnprintf (char *str, size_t count, const char *fmt, va_list args)
 {
@@ -835,7 +835,7 @@ vsnprintf (char *str, size_t count, const char *fmt, va_list args)
 }
 #endif
 
-#if !defined(HAVE_SNPRINTF)
+#ifndef snprintf
 int
 snprintf(char *str, size_t count, SNPRINTF_CONST char *fmt, ...)
 {
