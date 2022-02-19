@@ -9089,6 +9089,7 @@ else
 /* end confdefs.h.  */
 
 #include <stdio.h>
+#include <stdlib.h>
 int main(){exit(0);}
 
 _ACEOF
@@ -11211,6 +11212,7 @@ else
 /* end confdefs.h.  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <openssl/opensslv.h>
 #define DATA "conftest.sslincver"
@@ -11323,6 +11325,8 @@ else
 /* end confdefs.h.  */
 
 #include <string.h>
+#include <stdlib.h>
+#include <openssl/crypto.h>
 #include <openssl/opensslv.h>
 int main(void) { exit(SSLeay() == OPENSSL_VERSION_NUMBER ? 0 : 1); }
 
@@ -13841,6 +13845,7 @@ else
 /* end confdefs.h.  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #ifdef HAVE_SNPRINTF
 main()
@@ -14838,6 +14843,8 @@ else
 
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
+
+#include <stdio.h>
 
 int
 main ()

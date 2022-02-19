@@ -32,6 +32,14 @@
 #include <openssl/ecdsa.h>
 #include "ed25519-donna/ed25519.h"
 
+#ifndef u_char
+typedef unsigned char   u_char;
+#endif
+
+#ifndef u_int
+typedef unsigned int   u_int;
+#endif
+
 typedef struct Key Key;
 enum types {
 	KEY_RSA1,
