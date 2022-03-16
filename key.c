@@ -281,11 +281,8 @@ pamsshagentauth_key_fingerprint_raw(const Key *k, enum fp_type dgst_type,
 	*dgst_raw_length = 0;
 
 	switch (dgst_type) {
-	case SSH_FP_MD5:
-		md = EVP_md5();
-		break;
-	case SSH_FP_SHA1:
-		md = EVP_sha1();
+	case SSH_FP_SHA256:
+		md = EVP_sha256();
 		break;
 	default:
 		pamsshagentauth_fatal("key_fingerprint_raw: bad digest type %d",
@@ -335,6 +332,31 @@ pamsshagentauth_key_fingerprint_raw(const Key *k, enum fp_type dgst_type,
 		pamsshagentauth_fatal("key_fingerprint_raw: blob is null");
 	}
 	return retval;
+}
+
+static char *
+key_fingerprint_b64(const char *alg, u_char *dgst_raw, size_t dgst_raw_len)
+{
+	char *ret;
+	size_t plen = strlen(alg) + 1;
+	size_t rlen = ((dgst_raw_len + 2) / 3) * 4 + plen + 1;
+	int r;
+
+	if (dgst_raw_len > 65536 || (ret = calloc(1, rlen)) == NULL)
+		return NULL;
+	pamsshagentauth_strlcpy(ret, alg, rlen);
+	pamsshagentauth_strlcat(ret, ":", rlen);
+	if (dgst_raw_len == 0)
+		return ret;
+	if ((r = pamsshagentauth___b64_ntop(dgst_raw, dgst_raw_len,
+	    ret + plen, rlen - plen)) == -1) {
+		explicit_bzero(ret, rlen);
+		free(ret);
+		return NULL;
+	}
+	/* Trim padding characters from end */
+	ret[strcspn(ret, "=")] = '\0';
+	return ret;
 }
 
 static char *
@@ -405,6 +427,7 @@ key_fingerprint_bubblebabble(u_char *dgst_raw, u_int dgst_raw_len)
 char *
 pamsshagentauth_key_fingerprint(const Key *k, enum fp_type dgst_type, enum fp_rep dgst_rep)
 {
+	const char *dgst_name;
 	char *retval = NULL;
 	u_char *dgst_raw;
 	u_int dgst_raw_len;
@@ -416,6 +439,16 @@ pamsshagentauth_key_fingerprint(const Key *k, enum fp_type dgst_type, enum fp_re
 	case SSH_FP_HEX:
 		retval = key_fingerprint_hex(dgst_raw, dgst_raw_len);
 		break;
+	case SSH_FP_BASE64:
+		switch (dgst_type) {
+		case SSH_FP_SHA256:
+			dgst_name = "SHA256";
+			break;
+		default:
+			goto done;
+		}
+		retval = key_fingerprint_b64(dgst_name, dgst_raw, dgst_raw_len);
+		break;
 	case SSH_FP_BUBBLEBABBLE:
 		retval = key_fingerprint_bubblebabble(dgst_raw, dgst_raw_len);
 		break;
@@ -424,6 +457,7 @@ pamsshagentauth_key_fingerprint(const Key *k, enum fp_type dgst_type, enum fp_re
 		    dgst_rep);
 		break;
 	}
+ done:
 	memset(dgst_raw, 0, dgst_raw_len);
 	pamsshagentauth_xfree(dgst_raw);
 	return retval;
