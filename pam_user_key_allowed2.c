@@ -102,7 +102,7 @@ pamsshagentauth_check_authkeys_file(FILE * f, char *file, Key * key)
             found_key = 1;
             pamsshagentauth_logit("matching key found: file/command %s, line %lu", file,
                                   linenum);
-            fp = pamsshagentauth_key_fingerprint(found, SSH_FP_MD5, SSH_FP_HEX);
+            fp = pamsshagentauth_key_fingerprint(found, SSH_FP_SHA256, SSH_FP_BASE64);
             pamsshagentauth_logit("Found matching %s key: %s",
                                   pamsshagentauth_key_type(found), fp);
             pamsshagentauth_xfree(fp);

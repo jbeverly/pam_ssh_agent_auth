@@ -50,6 +50,7 @@ enum fp_type {
 };
 enum fp_rep {
 	SSH_FP_HEX,
+	SSH_FP_BASE64,
 	SSH_FP_BUBBLEBABBLE
 };
 
