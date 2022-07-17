@@ -58,6 +58,7 @@
 #include "pam_static_macros.h"
 #include "pam_user_authorized_keys.h"
 #include "userauth_pubkey_from_pam.h"
+#include "misc.h"
 
 #define strncasecmp_literal(A,B) strncasecmp( A, B, sizeof(B) - 1)
 #define UNUSED(expr) do { (void)(expr); } while (0)
@@ -175,6 +176,12 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     if( ! getpwnam(user) ) {
         pamsshagentauth_verbose("getpwnam(%s) failed, bailing out", user);
         goto cleanexit;
+    }
+
+    if(default_ssh_auth_sock && user) {
+       default_ssh_auth_sock = pamsshagentauth_percent_expand(default_ssh_auth_sock,
+       "h", getpwnam(user)->pw_dir,
+       "u", user, NULL);
     }
 
     if(authorized_keys_file_input && user) {
