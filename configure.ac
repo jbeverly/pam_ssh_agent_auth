@@ -500,7 +500,7 @@ int main(void) { exit(0); }
 	AC_DEFINE(HAVE_BUNDLE, 1, [Define if your system uses bundles instead of ELF shared objects])
 	AC_MSG_CHECKING(if we have working getaddrinfo)
 	AC_TRY_RUN([#include <mach-o/dyld.h>
-main() { if (NSVersionOfRunTimeLibrary("System") >= (60 << 16))
+int main() { if (NSVersionOfRunTimeLibrary("System") >= (60 << 16))
 		exit(0);
 	else
 		exit(1);
@@ -1467,7 +1467,7 @@ AC_MSG_CHECKING([for (overly) strict mkstemp])
 AC_RUN_IFELSE(
 	[AC_LANG_SOURCE([[
 #include <stdlib.h>
-main() { char template[]="conftest.mkstemp-test";
+int main() { char template[]="conftest.mkstemp-test";
 if (mkstemp(template) == -1)
 	exit(1);
 unlink(template); exit(0);
@@ -2598,7 +2598,7 @@ dnl test snprintf (broken on SCO w/gcc)
 #include <stdio.h>
 #include <string.h>
 #ifdef HAVE_SNPRINTF
-main()
+int main(void)
 {
 	char buf[50];
 	char expected_out[50];
@@ -2615,7 +2615,7 @@ main()
 	exit(0);
 }
 #else
-main() { exit(0); }
+int main(void) { exit(0); }
 #endif
 		]])], [ true ], [ AC_DEFINE(BROKEN_SNPRINTF) ],
 		AC_MSG_WARN([cross compiling: Assuming working snprintf()])
