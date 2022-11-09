@@ -179,9 +179,17 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     }
 
     if(default_ssh_auth_sock && user) {
+       uid_t uid = getpwnam(user)->pw_uid;
+       int length = snprintf( NULL, 0, "%u", uid);
+       char* uid_s = malloc( length + 1 );
+       snprintf( uid_s, length + 1, "%u", uid);
+
        default_ssh_auth_sock = pamsshagentauth_percent_expand(default_ssh_auth_sock,
        "h", getpwnam(user)->pw_dir,
+       "U", uid_s,
        "u", user, NULL);
+
+       free(uid_s);
     }
 
     if(authorized_keys_file_input && user) {

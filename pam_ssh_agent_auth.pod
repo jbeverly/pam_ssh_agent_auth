@@ -107,6 +107,8 @@ Automatically enables allow_user_owned_authorized_keys_file
 
 =item %H -- The short-hostname
 
+=item %U -- Uid
+
 =item %u -- Username
 
 =item %f -- FQDN
