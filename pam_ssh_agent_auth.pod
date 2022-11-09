@@ -73,6 +73,10 @@ This is ideally suited for use with sssd's sss_ssh_authorizedkeys, for authentic
 
 Specify a user to run the authorized_keys_command as. If this option is not specified, the authorized_keys_command will be run as the user being authenticated.
 
+=item default_ssh_auth_sock=/path/to/ssh_auth_sock
+
+Specify a default SSH_AUTH_SOCK to use. Useful when logging in with a Display Manager (such as SDDM), in which case environment variables are hard to set.
+
 =item debug
 
 A flag which enables verbose logging

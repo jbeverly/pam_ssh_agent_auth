@@ -58,6 +58,7 @@
 #include "pam_static_macros.h"
 #include "pam_user_authorized_keys.h"
 #include "userauth_pubkey_from_pam.h"
+#include "misc.h"
 
 #define strncasecmp_literal(A,B) strncasecmp( A, B, sizeof(B) - 1)
 #define UNUSED(expr) do { (void)(expr); } while (0)
@@ -66,6 +67,7 @@ char           *authorized_keys_file = NULL;
 uint8_t         allow_user_owned_authorized_keys_file = 0;
 char           *authorized_keys_command = NULL;
 char           *authorized_keys_command_user = NULL;
+char           *default_ssh_auth_sock = NULL;
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
 char           *__progname;
@@ -125,6 +127,9 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         if(strncasecmp_literal(*argv_ptr, "authorized_keys_command_user=") == 0 ) {
             authorized_keys_command_user = *argv_ptr + sizeof("authorized_keys_command_user=") - 1;
         }
+        if(strncasecmp_literal(*argv_ptr, "default_ssh_auth_sock=") == 0 ) {
+            default_ssh_auth_sock = *argv_ptr + sizeof("default_ssh_auth_sock=") - 1;
+        }
 #ifdef ENABLE_SUDO_HACK
         if(strncasecmp_literal(*argv_ptr, "sudo_service_name=") == 0) {
             strncpy( sudo_service_name, *argv_ptr + sizeof("sudo_service_name=") - 1, sizeof(sudo_service_name) - 1);
@@ -171,6 +176,12 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     if( ! getpwnam(user) ) {
         pamsshagentauth_verbose("getpwnam(%s) failed, bailing out", user);
         goto cleanexit;
+    }
+
+    if(default_ssh_auth_sock && user) {
+       default_ssh_auth_sock = pamsshagentauth_percent_expand(default_ssh_auth_sock,
+       "h", getpwnam(user)->pw_dir,
+       "u", user, NULL);
     }
 
     if(authorized_keys_file_input && user) {
