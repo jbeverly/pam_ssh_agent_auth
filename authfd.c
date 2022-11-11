@@ -157,6 +157,7 @@ ssh_get_authentication_socket(uid_t uid)
 		close(sock);
         if(errno == EACCES)
             pamsshagentauth_fatal("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
+		seteuid(0);
 		return -1;
 	}
 
