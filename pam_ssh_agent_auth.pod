@@ -77,6 +77,10 @@ Specify a user to run the authorized_keys_command as. If this option is not spec
 
 Specify a default SSH_AUTH_SOCK to use. Useful when logging in with a Display Manager (such as SDDM), in which case environment variables are hard to set.
 
+=item ignore_env_ssh_auth_sock
+
+A flag which makes SSH_AUTH_SOCK from environment variable ignored and fallback to default_ssh_auth_sock.
+
 =item debug
 
 A flag which enables verbose logging

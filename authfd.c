@@ -72,6 +72,7 @@
 #include "misc.h"
 
 extern char *default_ssh_auth_sock;
+extern uint8_t ignore_env_ssh_auth_sock;
 
 static int agent_present = 0;
 
@@ -112,7 +113,7 @@ ssh_get_authentication_socket(uid_t uid)
     struct stat sock_st;
 
 	authsocket = getenv(SSH_AUTHSOCKET_ENV_NAME);
-	authsocket = authsocket ? authsocket : default_ssh_auth_sock;
+	authsocket = authsocket && !ignore_env_ssh_auth_sock ? authsocket : default_ssh_auth_sock;
 	if (!authsocket)
 		return -1;
 
@@ -226,7 +227,7 @@ ssh_close_authentication_socket(int sock)
 	const char *authsocket;
 
 	authsocket = getenv(SSH_AUTHSOCKET_ENV_NAME);
-	authsocket = authsocket ? authsocket : default_ssh_auth_sock;
+	authsocket = authsocket && !ignore_env_ssh_auth_sock ? authsocket : default_ssh_auth_sock;
   
 	if (authsocket)
 		close(sock);
