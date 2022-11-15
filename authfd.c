@@ -71,6 +71,9 @@
 #include "atomicio.h"
 #include "misc.h"
 
+extern char *default_ssh_auth_sock;
+extern uint8_t ignore_env_ssh_auth_sock;
+
 static int agent_present = 0;
 
 /* helper */
@@ -110,6 +113,7 @@ ssh_get_authentication_socket(uid_t uid)
     struct stat sock_st;
 
 	authsocket = getenv(SSH_AUTHSOCKET_ENV_NAME);
+	authsocket = authsocket && !ignore_env_ssh_auth_sock ? authsocket : default_ssh_auth_sock;
 	if (!authsocket)
 		return -1;
 
@@ -146,18 +150,22 @@ ssh_get_authentication_socket(uid_t uid)
     errno = 0; 
     /* To ensure a race condition is not used to circumvent the stat
        above, we will temporarily drop UID to the caller */
-    if (seteuid(uid) < 0)
-        return -1;
+	int seteuid_called = geteuid() != uid;
 
+    if (seteuid_called && seteuid(uid) < 0)
+		return -1;
+	
 	if (connect(sock, (struct sockaddr *)&sunaddr, sizeof sunaddr) < 0) {
 		close(sock);
         if(errno == EACCES)
             pamsshagentauth_fatal("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
+		if(seteuid_called)
+		    seteuid(0);
 		return -1;
 	}
 
     /* we now continue the regularly scheduled programming */
-    if (seteuid(0) < 0)
+    if (seteuid_called && seteuid(0) < 0)
         return -1;
 
 	agent_present = 1;
@@ -220,7 +228,12 @@ ssh_request_reply(AuthenticationConnection *auth, Buffer *request, Buffer *reply
 void
 ssh_close_authentication_socket(int sock)
 {
-	if (getenv(SSH_AUTHSOCKET_ENV_NAME))
+	const char *authsocket;
+
+	authsocket = getenv(SSH_AUTHSOCKET_ENV_NAME);
+	authsocket = authsocket && !ignore_env_ssh_auth_sock ? authsocket : default_ssh_auth_sock;
+  
+	if (authsocket)
 		close(sock);
 }
 
