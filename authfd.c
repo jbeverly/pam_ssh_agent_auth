@@ -150,19 +150,22 @@ ssh_get_authentication_socket(uid_t uid)
     errno = 0; 
     /* To ensure a race condition is not used to circumvent the stat
        above, we will temporarily drop UID to the caller */
-    if (seteuid(uid) < 0)
-        return -1;
+	int seteuid_called = geteuid() != uid;
 
+    if (seteuid_called && seteuid(uid) < 0)
+		return -1;
+	
 	if (connect(sock, (struct sockaddr *)&sunaddr, sizeof sunaddr) < 0) {
 		close(sock);
         if(errno == EACCES)
             pamsshagentauth_fatal("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
-		seteuid(0);
+		if(seteuid_called)
+		    seteuid(0);
 		return -1;
 	}
 
     /* we now continue the regularly scheduled programming */
-    if (seteuid(0) < 0)
+    if (seteuid_called && seteuid(0) < 0)
         return -1;
 
 	agent_present = 1;
