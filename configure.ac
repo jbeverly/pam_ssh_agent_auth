@@ -116,11 +116,7 @@ if test ! -z "$PATH_PASSWD_PROG" ; then
 		[Full path of your "passwd" program])
 fi
 
-if test -z "$LD" ; then
-	LD=$CC
-fi
-AC_SUBST(LD)
-
+AC_SUBST(LD, $CC)
 
 AC_CHECK_DECL(LLONG_MAX, have_llong_max=1, , [#include <limits.h>])
 
