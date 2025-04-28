@@ -887,7 +887,19 @@ pamsshagentauth_key_from_private(const Key *k)
 int
 pamsshagentauth_key_type_from_name(char *name)
 {
-	if (strcmp(name, "rsa1") == 0) {
+	pamsshagentauth_verbose("%% key_type_from_name: [%s]", name);
+	/* Skip certificates altogether. We don't support them, and
+	   continuing here triggers a bug later: we end up refusing
+	   *all* keys because we encountered a certificate in the
+	   agent. This is because of the special handling of ECDSA
+	   types, matching here only a prefix of the name rather than
+	   the whole thing. Should perhaps be fixed another way, but
+	   this is easy and produces correct behavior ("unknown key
+	   type").
+	*/
+	if (strstr(name, "-cert-")) {
+		pamsshagentauth_verbose("key_type_from_name: certificates not supported", name);
+	} else if (strcmp(name, "rsa1") == 0) {
 		return KEY_RSA1;
 	} else if (strcmp(name, "rsa") == 0) {
 		return KEY_RSA;
