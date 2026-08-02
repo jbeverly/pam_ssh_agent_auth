@@ -887,7 +887,19 @@ pamsshagentauth_key_from_private(const Key *k)
 int
 pamsshagentauth_key_type_from_name(char *name)
 {
-	if (strcmp(name, "rsa1") == 0) {
+	pamsshagentauth_verbose("%% key_type_from_name: [%s]", name);
+	/* Skip certificates altogether. We don't support them, and
+	   continuing here triggers a bug later: we end up refusing
+	   *all* keys because we encountered a certificate in the
+	   agent. This is because of the special handling of ECDSA
+	   types, matching here only a prefix of the name rather than
+	   the whole thing. Should perhaps be fixed another way, but
+	   this is easy and produces correct behavior ("unknown key
+	   type").
+	*/
+	if (strstr(name, "-cert-")) {
+		pamsshagentauth_verbose("key_type_from_name: certificates not supported", name);
+	} else if (strcmp(name, "rsa1") == 0) {
 		return KEY_RSA1;
 	} else if (strcmp(name, "rsa") == 0) {
 		return KEY_RSA;
@@ -909,6 +921,7 @@ pamsshagentauth_key_type_from_name(char *name)
 int
 pamsshagentauth_ec_group_from_name(char *name)
 {
+	pamsshagentauth_verbose("%% ec_group_from_name: [%s]", name);
 	// if we get "ecdsa-sha2-" advance past the ecdsa-sha2- bit
 	if (strlen(name) > 11)
 		name += 11;
@@ -919,6 +932,7 @@ pamsshagentauth_ec_group_from_name(char *name)
 	} else if (strcmp(name, "nistp521") == 0) {
 		return NID_secp521r1;
 	}
+	pamsshagentauth_verbose("ec_group_from_name: unknown EC group '%s'", name);
 	return -1;
 }
 
@@ -1092,7 +1106,10 @@ pamsshagentauth_key_from_blob(const u_char *blob, u_int blen)
 		goto out;
 	}
 	rlen = pamsshagentauth_buffer_len(&b);
-	if (key != NULL && rlen != 0)
+	/* If the type was unrecognized (KEY_UNSPEC), we expect that
+	   we may not be able to parse it, so don't log an error in
+	   that case. */
+	if (key != NULL && rlen != 0 && type != KEY_UNSPEC)
 		pamsshagentauth_logerror("key_from_blob: remaining bytes in key blob %d", rlen);
  out:
 	if (ktype != NULL)
