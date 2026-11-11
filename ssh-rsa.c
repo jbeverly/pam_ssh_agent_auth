@@ -134,7 +134,12 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	}
 	pamsshagentauth_buffer_init(&b);
 	pamsshagentauth_buffer_append(&b, signature, signaturelen);
-	ktype = pamsshagentauth_buffer_get_string(&b, NULL);
+	ktype = pamsshagentauth_buffer_get_string_ret(&b, NULL);
+	if (ktype == NULL) {
+		pamsshagentauth_logerror("ssh_rsa_verify: malformed signature");
+		pamsshagentauth_buffer_free(&b);
+		return -1;
+	}
 	if (strcmp("ssh-rsa", ktype) != 0) {
 		pamsshagentauth_logerror("ssh_rsa_verify: cannot handle type %s", ktype);
 		pamsshagentauth_buffer_free(&b);
@@ -142,7 +147,12 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		return -1;
 	}
 	pamsshagentauth_xfree(ktype);
-	sigblob = pamsshagentauth_buffer_get_string(&b, &len);
+	sigblob = pamsshagentauth_buffer_get_string_ret(&b, &len);
+	if (sigblob == NULL) {
+		pamsshagentauth_logerror("ssh_rsa_verify: malformed signature");
+		pamsshagentauth_buffer_free(&b);
+		return -1;
+	}
 	rlen = pamsshagentauth_buffer_len(&b);
 	pamsshagentauth_buffer_free(&b);
 	if (rlen != 0) {

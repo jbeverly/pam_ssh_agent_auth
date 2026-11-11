@@ -199,8 +199,10 @@ ssh_request_reply(AuthenticationConnection *auth, Buffer *request, Buffer *reply
 
 	/* Extract the length, and check it for sanity. */
 	len = pamsshagentauth_get_u32(buf);
-	if (len > 256 * 1024)
-		pamsshagentauth_fatal("Authentication response too long: %u", len);
+	if (len > 256 * 1024) {
+		pamsshagentauth_logerror("Authentication response too long: %u", len);
+		return 0;
+	}
 
 	/* Read the rest of the response in to the buffer. */
 	pamsshagentauth_buffer_clear(reply);
@@ -333,18 +335,36 @@ ssh_get_num_identities(AuthenticationConnection *auth, int version)
 	pamsshagentauth_buffer_free(&request);
 
 	/* Get message type, and verify that we got a proper answer. */
-	type = pamsshagentauth_buffer_get_char(&auth->identities);
+	{
+		char ch;
+
+		if (pamsshagentauth_buffer_get_char_ret(&ch, &auth->identities) == -1) {
+			pamsshagentauth_logerror("Malformed authentication reply: no message type");
+			return 0;
+		}
+		type = (u_char)ch;
+	}
 	if (agent_failed(type)) {
 		return 0;
 	} else if (type != code2) {
-		pamsshagentauth_fatal("Bad authentication reply message type: %d", type);
+		pamsshagentauth_logerror("Bad authentication reply message type: %d", type);
+		return 0;
 	}
 
 	/* Get the number of entries in the response and check it for sanity. */
-	auth->howmany = pamsshagentauth_buffer_get_int(&auth->identities);
-	if ((u_int)auth->howmany > 1024)
-		pamsshagentauth_fatal("Too many identities in authentication reply: %d",
-		    auth->howmany);
+	{
+		u_int n;
+
+		if (pamsshagentauth_buffer_get_int_ret(&n, &auth->identities) == -1) {
+			pamsshagentauth_logerror("Malformed authentication reply: no identity count");
+			return 0;
+		}
+		if (n > 1024) {
+			pamsshagentauth_logerror("Too many identities in authentication reply: %u", n);
+			return 0;
+		}
+		auth->howmany = (int)n;
+	}
 
 	return auth->howmany;
 }
@@ -398,8 +418,17 @@ ssh_get_next_identity(AuthenticationConnection *auth, char **comment, int versio
 #endif
 		break;
 	case 2:
-		blob = pamsshagentauth_buffer_get_string(&auth->identities, &blen);
-		*comment = pamsshagentauth_buffer_get_string(&auth->identities, NULL);
+		blob = pamsshagentauth_buffer_get_string_ret(&auth->identities, &blen);
+		if (blob == NULL) {
+			pamsshagentauth_logerror("Malformed authentication reply: bad identity blob");
+			return NULL;
+		}
+		*comment = pamsshagentauth_buffer_get_string_ret(&auth->identities, NULL);
+		if (*comment == NULL) {
+			pamsshagentauth_logerror("Malformed authentication reply: bad identity comment");
+			pamsshagentauth_xfree(blob);
+			return NULL;
+		}
 		key = pamsshagentauth_key_from_blob(blob, blen);
 		pamsshagentauth_xfree(blob);
 		break;
@@ -461,7 +490,7 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 	if (agent_failed(type)) {
 		pamsshagentauth_logit("Agent admitted failure to authenticate using the key.");
 	} else if (type != SSH_AGENT_RSA_RESPONSE) {
-		pamsshagentauth_fatal("Bad authentication response: %d", type);
+		pamsshagentauth_logerror("Bad authentication response: %d", type);
 	} else {
 		success = 1;
 		/*
@@ -506,14 +535,26 @@ ssh_agent_sign(AuthenticationConnection *auth,
 		pamsshagentauth_buffer_free(&msg);
 		return -1;
 	}
-	type = pamsshagentauth_buffer_get_char(&msg);
+	{
+		char ch;
+
+		if (pamsshagentauth_buffer_get_char_ret(&ch, &msg) == -1) {
+			pamsshagentauth_logerror("Malformed authentication reply: no message type");
+			pamsshagentauth_buffer_free(&msg);
+			return -1;
+		}
+		type = (u_char)ch;
+	}
 	if (agent_failed(type)) {
 		pamsshagentauth_logit("Agent admitted failure to sign using the key.");
 	} else if (type != SSH2_AGENT_SIGN_RESPONSE) {
-		pamsshagentauth_fatal("Bad authentication response: %d", type);
+		pamsshagentauth_logerror("Bad authentication response: %d", type);
 	} else {
-		ret = 0;
-		*sigp = pamsshagentauth_buffer_get_string(&msg, lenp);
+		*sigp = pamsshagentauth_buffer_get_string_ret(&msg, lenp);
+		if (*sigp != NULL)
+			ret = 0;
+		else
+			pamsshagentauth_logerror("Malformed authentication reply: bad signature");
 	}
 	pamsshagentauth_buffer_free(&msg);
 	return ret;
@@ -763,7 +804,8 @@ pamsshagentauth_decode_reply(int type)
 	case SSH_AGENT_SUCCESS:
 		return 1;
 	default:
-		pamsshagentauth_fatal("Bad response from authentication agent: %d", type);
+		pamsshagentauth_logerror("Bad response from authentication agent: %d", type);
+		return 0;
 	}
 	/* NOTREACHED */
 	return 0;
