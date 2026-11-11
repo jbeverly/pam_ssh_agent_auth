@@ -56,9 +56,9 @@ ssh_rsa_sign(const Key *key, u_char **sigp, u_int *lenp,
 		return -1;
 	}
 	md = EVP_MD_CTX_create();
-	EVP_DigestInit(&md, evp_md);
-	EVP_DigestUpdate(&md, data, datalen);
-	EVP_DigestFinal(&md, digest, &dlen);
+	EVP_DigestInit(md, evp_md);
+	EVP_DigestUpdate(md, data, datalen);
+	EVP_DigestFinal(md, digest, &dlen);
 
 	slen = RSA_size(key->rsa);
 	sig = pamsshagentauth_xmalloc(slen);

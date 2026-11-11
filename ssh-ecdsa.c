@@ -73,7 +73,7 @@ ssh_ecdsa_sign(const Key *key, u_char **sigp, u_int *lenp,
     if (pamsshagentauth_buffer_get_bignum2_ret(&bb, sig->r) == -1 ||
         pamsshagentauth_buffer_get_bignum2_ret(&bb, sig->s) == -1) {
 #else
-    DSA_SIG_get0(sig, &r, &s);
+    DSA_SIG_get0((const DSA_SIG*)sig, (const BIGNUM **)&r, (const BIGNUM **)&s);
     if (pamsshagentauth_buffer_get_bignum2_ret(&bb, r) == -1 ||
         pamsshagentauth_buffer_get_bignum2_ret(&bb, s) == -1) {
 #endif
