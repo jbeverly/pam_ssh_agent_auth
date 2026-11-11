@@ -181,10 +181,11 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		pamsshagentauth_xfree(sigblob);
 		return -1;
 	}
-	md = EVP_MD_CTX_create();
-	EVP_DigestInit(md, evp_md);
-	EVP_DigestUpdate(md, data, datalen);
-	EVP_DigestFinal(md, digest, &dlen);
+	if ((md = EVP_MD_CTX_create()) == NULL ||
+	    EVP_DigestInit(md, evp_md) != 1 ||
+	    EVP_DigestUpdate(md, data, datalen) != 1 ||
+	    EVP_DigestFinal(md, digest, &dlen) != 1)
+		pamsshagentauth_fatal("ssh_rsa_verify: digest failed");
 
 	ret = openssh_RSA_verify(nid, digest, dlen, sigblob, len, key->rsa);
 	memset(digest, 'd', sizeof(digest));

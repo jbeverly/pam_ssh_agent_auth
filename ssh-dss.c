@@ -213,10 +213,11 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	pamsshagentauth_xfree(sigblob);
 
 	/* sha1 the data */
-	md = EVP_MD_CTX_create();
-	EVP_DigestInit(md, evp_md);
-	EVP_DigestUpdate(md, data, datalen);
-	EVP_DigestFinal(md, digest, &dlen);
+	if ((md = EVP_MD_CTX_create()) == NULL ||
+	    EVP_DigestInit(md, evp_md) != 1 ||
+	    EVP_DigestUpdate(md, data, datalen) != 1 ||
+	    EVP_DigestFinal(md, digest, &dlen) != 1)
+		pamsshagentauth_fatal("ssh_dss_verify: digest failed");
 
 	ret = DSA_do_verify(digest, dlen, sig, key->dsa);
 	memset(digest, 'd', sizeof(digest));

@@ -188,10 +188,11 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
     pamsshagentauth_xfree(sigblob);
 
     /* sha256 the data */
-    md = EVP_MD_CTX_create();
-    EVP_DigestInit(md, evp_md);
-    EVP_DigestUpdate(md, data, datalen);
-    EVP_DigestFinal(md, digest, &dlen);
+    if ((md = EVP_MD_CTX_create()) == NULL ||
+        EVP_DigestInit(md, evp_md) != 1 ||
+        EVP_DigestUpdate(md, data, datalen) != 1 ||
+        EVP_DigestFinal(md, digest, &dlen) != 1)
+        pamsshagentauth_fatal("ssh_ecdsa_verify: digest failed");
 
     ret = ECDSA_do_verify(digest, dlen, sig, key->ecdsa);
     memset(digest, 'd', sizeof(digest));
