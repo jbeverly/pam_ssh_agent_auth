@@ -132,7 +132,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
 #endif
     }
 
-    pamsshagentauth_log_init(__progname, log_lvl, facility, getenv("PAM_SSH_AGENT_AUTH_DEBUG") ? 1 : 0);
+    pamsshagentauth_log_init(__progname, log_lvl, facility, 0);
     pam_get_item(pamh, PAM_USER, (void *) &user);
     pam_get_item(pamh, PAM_RUSER, (void *) &ruser_ptr);
 
