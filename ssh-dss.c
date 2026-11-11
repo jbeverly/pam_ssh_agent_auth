@@ -201,8 +201,6 @@ ssh_dss_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		pamsshagentauth_fatal("ssh_dss_verify: BN_new failed");
 	if ((s = BN_new()) == NULL)
 		pamsshagentauth_fatal("ssh_dss_verify: BN_new failed");
-	if (DSA_SIG_set0(sig, r, s) != 1)
-		pamsshagentauth_fatal("ssh_dss_verify: DSA_SIG_set0 failed");
 	if ((BN_bin2bn(sigblob, INTBLOB_LEN, r) == NULL) ||
 	    (BN_bin2bn(sigblob+ INTBLOB_LEN, INTBLOB_LEN, s) == NULL))
 		pamsshagentauth_fatal("ssh_dss_verify: BN_bin2bn failed");
