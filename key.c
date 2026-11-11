@@ -1074,10 +1074,11 @@ pamsshagentauth_key_from_blob(const u_char *blob, u_int blen)
 		u_int len = 0;
 		key = pamsshagentauth_key_new(type);
 		void *kbits = pamsshagentauth_buffer_get_string_ret(&b, &len);
-		if (len != pamsshagentauth_key_size(key)) {
+		if (kbits == NULL || len != pamsshagentauth_key_size(key)) {
 			pamsshagentauth_logerror("key_from_blob: ed25519 key invalid (%u bytes read)",
 				len);
-			pamsshagentauth_xfree(kbits);
+			if (kbits != NULL)
+				pamsshagentauth_xfree(kbits);
 			pamsshagentauth_key_free(key);
 			key = NULL;
 			goto out;
