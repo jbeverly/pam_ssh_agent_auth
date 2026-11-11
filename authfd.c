@@ -114,11 +114,13 @@ ssh_get_authentication_socket(uid_t uid)
 		return -1;
 
     /* Advisory only; seteuid ensures no race condition; but will only log if we see EACCES */
-    if( stat(authsocket,&sock_st) == 0) {
-        if(uid != 0 && sock_st.st_uid != uid) {
-            pamsshagentauth_fatal("uid %lu attempted to open an agent socket owned by uid %lu", (unsigned long) uid, (unsigned long) sock_st.st_uid);
-            return -1;
-        }
+    if (stat(authsocket, &sock_st) != 0) {
+        pamsshagentauth_logerror("ssh-agent socket cannot be examined");
+        return -1;
+    }
+    if(uid != 0 && sock_st.st_uid != uid) {
+        pamsshagentauth_fatal("uid %lu attempted to open an agent socket owned by uid %lu", (unsigned long) uid, (unsigned long) sock_st.st_uid);
+        return -1;
     }
 
     /* 
