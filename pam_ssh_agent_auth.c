@@ -225,6 +225,7 @@ cleanexit:
 #endif
 
     free(authorized_keys_file);
+    authorized_keys_file = NULL;
 
     return retval;
 }
