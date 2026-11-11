@@ -421,18 +421,28 @@ ssh_get_next_identity(AuthenticationConnection *auth, char **comment, int versio
 		blob = pamsshagentauth_buffer_get_string_ret(&auth->identities, &blen);
 		if (blob == NULL) {
 			pamsshagentauth_logerror("Malformed authentication reply: bad identity blob");
+			/* The stream is unparseable from here on: stop iterating. */
+			auth->howmany = 0;
 			return NULL;
 		}
 		*comment = pamsshagentauth_buffer_get_string_ret(&auth->identities, NULL);
 		if (*comment == NULL) {
 			pamsshagentauth_logerror("Malformed authentication reply: bad identity comment");
 			pamsshagentauth_xfree(blob);
+			auth->howmany = 0;
 			return NULL;
 		}
 		key = pamsshagentauth_key_from_blob(blob, blen);
 		pamsshagentauth_xfree(blob);
+		if (key == NULL) {
+			/* Skip this identity; the caller keeps asking while entries remain. */
+			pamsshagentauth_logerror("Skipping an identity the module cannot parse: %s", *comment);
+			pamsshagentauth_xfree(*comment);
+			*comment = NULL;
+		}
 		break;
 	default:
+		auth->howmany = 0;
 		return NULL;
 	}
 	/* Decrement the number of remaining entries. */

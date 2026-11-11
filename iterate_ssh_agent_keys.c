@@ -192,7 +192,7 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
 
     if ((ac = ssh_get_authentication_connection(uid))) {
         pamsshagentauth_verbose("Contacted ssh-agent of user %s (%u)", ruser, uid);
-        for (key = ssh_get_first_identity(ac, &comment, 2); key != NULL; key = ssh_get_next_identity(ac, &comment, 2)) 
+        for (key = ssh_get_first_identity(ac, &comment, 2); key != NULL || ac->howmany > 0; key = ssh_get_next_identity(ac, &comment, 2))
         {
             if(key != NULL) {
                 id = pamsshagentauth_xcalloc(1, sizeof(*id));
