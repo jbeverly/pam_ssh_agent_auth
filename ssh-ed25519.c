@@ -82,6 +82,12 @@ ssh_ed25519_verify(const Key *key, const u_char *signature, u_int signaturelen,
         pamsshagentauth_xfree(sigblob);
         return -1;
     }
+    if (len != sizeof(sig)) {
+        pamsshagentauth_logerror("ssh_ed25519_verify: signature length %u, expected %zu",
+            len, sizeof(sig));
+        pamsshagentauth_xfree(sigblob);
+        return -1;
+    }
     memcpy(sig, sigblob, sizeof(sig));
     pamsshagentauth_xfree(sigblob);
 
