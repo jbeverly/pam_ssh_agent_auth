@@ -81,7 +81,6 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     char           *ruser_ptr = NULL;
     char           *servicename = NULL;
     char           *authorized_keys_file_input = NULL;
-    char            sudo_service_name[128] = "sudo";
     char            sshd_service_name[128] = "sshd";
     char            ruser[128] = "";
 
@@ -125,11 +124,6 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         if(strncasecmp_literal(*argv_ptr, "authorized_keys_command_user=") == 0 ) {
             authorized_keys_command_user = *argv_ptr + sizeof("authorized_keys_command_user=") - 1;
         }
-#ifdef ENABLE_SUDO_HACK
-        if(strncasecmp_literal(*argv_ptr, "sudo_service_name=") == 0) {
-            strncpy( sudo_service_name, *argv_ptr + sizeof("sudo_service_name=") - 1, sizeof(sudo_service_name) - 1);
-        }
-#endif
     }
 
     pamsshagentauth_log_init(__progname, log_lvl, facility, 0);
@@ -142,25 +136,11 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         strncpy(ruser, ruser_ptr, sizeof(ruser) - 1);
     } else {
         /*
-         * XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX:
-         * This is a kludge to address a bug in sudo wherein PAM_RUSER is left unset at the time
-         * pam_authenticate is called, and so we cannot reliably know who invoked the process except
-         * via the SUDO_USER environment variable. I've submitted a patch to sudo which fixes this,
-         * and so this should not be enabled with versions of sudo which contain it.
+         * PAM_RUSER is the only source for the caller's name. The SUDO_USER environment
+         * variable and getuid() are not trusted here, so without PAM_RUSER we refuse.
          */
-#ifdef ENABLE_SUDO_HACK
-        if( (strlen(sudo_service_name) > 0) && strncasecmp(servicename, sudo_service_name, sizeof(sudo_service_name) - 1) == 0 && getenv("SUDO_USER") ) {
-            strncpy(ruser, getenv("SUDO_USER"), sizeof(ruser) - 1 );
-            pamsshagentauth_verbose( "Using environment variable SUDO_USER (%s)", ruser );
-        } else
-#endif
-        {
-            if( ! getpwuid(getuid()) ) {
-                pamsshagentauth_verbose("Unable to getpwuid(getuid())");
-                goto cleanexit;
-            }
-            strncpy(ruser, getpwuid(getuid())->pw_name, sizeof(ruser) - 1);
-        }
+        pamsshagentauth_verbose("PAM_RUSER is not set; refusing authentication");
+        goto cleanexit;
     }
 
     /* Might as well explicitely confirm the user exists here */
