@@ -92,26 +92,29 @@ pamsshagentauth_temporarily_use_uid(struct passwd *pw)
 	} else { /* saved_egroupslen == 0 */
 		if (saved_egroups != NULL)
 			pamsshagentauth_xfree(saved_egroups);
+		saved_egroups = NULL;
 	}
 
-	/* set and save the user's groups */
-	if (user_groupslen == -1) {
-		if (initgroups(pw->pw_name, pw->pw_gid) < 0)
-			pamsshagentauth_fatal("initgroups: %s: %.100s", pw->pw_name,
-			    strerror(errno));
+	/*
+	 * Set the user's groups. They are looked up on every call: caching them would apply
+	 * the first user's groups to every later user in a long-lived process.
+	 */
+	if (initgroups(pw->pw_name, pw->pw_gid) < 0)
+		pamsshagentauth_fatal("initgroups: %s: %.100s", pw->pw_name,
+		    strerror(errno));
 
-		user_groupslen = getgroups(0, NULL);
-		if (user_groupslen < 0)
+	user_groupslen = getgroups(0, NULL);
+	if (user_groupslen < 0)
+		pamsshagentauth_fatal("getgroups: %.100s", strerror(errno));
+	if (user_groupslen > 0) {
+		user_groups = pamsshagentauth_xrealloc(user_groups,
+		    user_groupslen, sizeof(gid_t));
+		if (getgroups(user_groupslen, user_groups) < 0)
 			pamsshagentauth_fatal("getgroups: %.100s", strerror(errno));
-		if (user_groupslen > 0) {
-			user_groups = pamsshagentauth_xrealloc(user_groups,
-			    user_groupslen, sizeof(gid_t));
-			if (getgroups(user_groupslen, user_groups) < 0)
-				pamsshagentauth_fatal("getgroups: %.100s", strerror(errno));
-		} else { /* user_groupslen == 0 */
-			if (user_groups)
-				pamsshagentauth_xfree(user_groups);
-		}
+	} else { /* user_groupslen == 0 */
+		if (user_groups)
+			pamsshagentauth_xfree(user_groups);
+		user_groups = NULL;
 	}
 	/* Set the effective uid to the given (unprivileged) uid. */
 	if (setgroups(user_groupslen, user_groups) < 0)

@@ -124,9 +124,6 @@
 /* Workaround more Linux IPv6 quirks */
 #undef DONT_TRY_OTHER_AF
 
-/* enable sudo hack */
-#undef ENABLE_SUDO_HACK
-
 /* Builtin PRNG command timeout */
 #undef ENTROPY_TIMEOUT_MSEC
 

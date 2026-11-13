@@ -7577,10 +7577,7 @@ _ACEOF
 
 fi
 
-if test -z "$LD" ; then
-	LD=$CC
-fi
-
+LD=$CC
 
 
 ac_fn_c_check_decl "$LINENO" "LLONG_MAX" "ac_cv_have_decl_LLONG_MAX" "#include <limits.h>

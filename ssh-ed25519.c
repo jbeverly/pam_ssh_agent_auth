@@ -60,15 +60,31 @@ ssh_ed25519_verify(const Key *key, const u_char *signature, u_int signaturelen,
    	pamsshagentauth_buffer_init(&b);
     pamsshagentauth_buffer_append(&b, signature, signaturelen);
 
-    char *ktype = pamsshagentauth_buffer_get_string(&b, NULL);
+    char *ktype = pamsshagentauth_buffer_get_string_ret(&b, NULL);
+    if (ktype == NULL) {
+        pamsshagentauth_logerror("ssh_ed25519_verify: malformed signature");
+        pamsshagentauth_buffer_free(&b);
+        return -1;
+    }
     pamsshagentauth_xfree(ktype);
 
-    sigblob = pamsshagentauth_buffer_get_string(&b, &len);
+    sigblob = pamsshagentauth_buffer_get_string_ret(&b, &len);
+    if (sigblob == NULL) {
+        pamsshagentauth_logerror("ssh_ed25519_verify: malformed signature");
+        pamsshagentauth_buffer_free(&b);
+        return -1;
+    }
     rlen = pamsshagentauth_buffer_len(&b);
     pamsshagentauth_buffer_free(&b);
     if (rlen != 0) {
         pamsshagentauth_logerror("ssh_ed25519_verify: "
             "remaining bytes in signature %d", rlen);
+        pamsshagentauth_xfree(sigblob);
+        return -1;
+    }
+    if (len != sizeof(sig)) {
+        pamsshagentauth_logerror("ssh_ed25519_verify: signature length %u, expected %zu",
+            len, sizeof(sig));
         pamsshagentauth_xfree(sigblob);
         return -1;
     }

@@ -86,11 +86,11 @@ extern char *authorized_keys_command;
 
 extern char *authorized_keys_command_user;
 
-extern uint8_t allow_user_owned_authorized_keys_file;
 
 uid_t authorized_keys_file_allowed_owner_uid;
 
-void
+/* Returns 0 on success, -1 if the path cannot be resolved; authorized_keys_file is then unset. */
+int
 parse_authorized_key_file(const char *user,
                           const char *authorized_keys_file_input)
 {
@@ -100,34 +100,54 @@ parse_authorized_key_file(const char *user,
     char *slash_ptr = NULL;
     char owner_uname[128] = "";
     size_t owner_uname_len = 0;
+    struct passwd *user_pw, *owner_pw;
+    uid_t user_uid;
+    char *user_dir;
 
-    /* 
+    authorized_keys_file = NULL;
+
+    if((user_pw = getpwnam(user)) == NULL) {
+        pamsshagentauth_logerror("parse_authorized_key_file: unknown user %s", user);
+        return -1;
+    }
+    /* Copy now: the getpwnam below for ~owner/ overwrites the static result. */
+    user_uid = user_pw->pw_uid;
+    user_dir = pamsshagentauth_xstrdup(user_pw->pw_dir);
+
+    /*
      * temporary copy, so that both tilde expansion and percent expansion both
      * get to apply to the path
      */
     strncat(auth_keys_file_buf, authorized_keys_file_input,
             sizeof(auth_keys_file_buf) - 1);
 
-    if(allow_user_owned_authorized_keys_file)
-        authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
-
     if(*auth_keys_file_buf == '~') {
         if(*(auth_keys_file_buf + 1) == '/') {
-            authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
+            authorized_keys_file_allowed_owner_uid = user_uid;
         } else {
             slash_ptr = strchr(auth_keys_file_buf, '/');
-            if(!slash_ptr)
-                pamsshagentauth_fatal
-                    ("cannot expand tilde in path without a `/'");
+            if(!slash_ptr) {
+                pamsshagentauth_logerror("cannot expand tilde in path without a `/'");
+                pamsshagentauth_xfree(user_dir);
+                return -1;
+            }
 
             owner_uname_len = slash_ptr - auth_keys_file_buf - 1;
-            if(owner_uname_len > (sizeof(owner_uname) - 1))
-                pamsshagentauth_fatal("Username too long");
+            if(owner_uname_len > (sizeof(owner_uname) - 1)) {
+                pamsshagentauth_logerror("Username too long");
+                pamsshagentauth_xfree(user_dir);
+                return -1;
+            }
 
             strncat(owner_uname, auth_keys_file_buf + 1, owner_uname_len);
-            if(!authorized_keys_file_allowed_owner_uid)
-                authorized_keys_file_allowed_owner_uid =
-                    getpwnam(owner_uname)->pw_uid;
+            if(!authorized_keys_file_allowed_owner_uid) {
+                if((owner_pw = getpwnam(owner_uname)) == NULL) {
+                    pamsshagentauth_logerror("parse_authorized_key_file: unknown user %s", owner_uname);
+                    pamsshagentauth_xfree(user_dir);
+                    return -1;
+                }
+                authorized_keys_file_allowed_owner_uid = owner_pw->pw_uid;
+            }
         }
         authorized_keys_file =
             pamsshagentauth_tilde_expand_filename(auth_keys_file_buf,
@@ -142,7 +162,7 @@ parse_authorized_key_file(const char *user,
     }
 
     if(strstr(auth_keys_file_buf, "%h")) {
-        authorized_keys_file_allowed_owner_uid = getpwnam(user)->pw_uid;
+        authorized_keys_file_allowed_owner_uid = user_uid;
     }
 #if HAVE_GETHOSTNAME
     *hostname = '\0';
@@ -151,19 +171,29 @@ parse_authorized_key_file(const char *user,
 #endif
     authorized_keys_file =
         pamsshagentauth_percent_expand(auth_keys_file_buf, "h",
-                                       getpwnam(user)->pw_dir, "H", hostname,
+                                       user_dir, "H", hostname,
                                        "f", fqdn, "u", user, NULL);
+    pamsshagentauth_xfree(user_dir);
+    return 0;
 }
 
 int
 pam_user_key_allowed(const char *ruser, Key * key)
 {
-    return
-        pamsshagentauth_user_key_allowed2(getpwuid(authorized_keys_file_allowed_owner_uid),
-                                          key, authorized_keys_file)
-        || pamsshagentauth_user_key_allowed2(getpwuid(0), key,
-                                             authorized_keys_file)
-        || pamsshagentauth_user_key_command_allowed2(authorized_keys_command,
-                                                     authorized_keys_command_user,
-                                                     getpwnam(ruser), key);
+    struct passwd *pw;
+
+    if(authorized_keys_file != NULL) {
+        if((pw = getpwuid(authorized_keys_file_allowed_owner_uid)) != NULL
+           && pamsshagentauth_user_key_allowed2(pw, key, authorized_keys_file))
+            return 1;
+        if((pw = getpwuid(0)) != NULL
+           && pamsshagentauth_user_key_allowed2(pw, key, authorized_keys_file))
+            return 1;
+    }
+    if((pw = getpwnam(ruser)) != NULL
+       && pamsshagentauth_user_key_command_allowed2(authorized_keys_command,
+                                                    authorized_keys_command_user,
+                                                    pw, key))
+        return 1;
+    return 0;
 }

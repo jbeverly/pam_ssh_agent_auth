@@ -33,6 +33,6 @@
 
 #include "identity.h"
 int pam_user_key_allowed(const char *, Key *);
-void parse_authorized_key_file(const char *, const char *);
+int parse_authorized_key_file(const char *, const char *);
 
 #endif

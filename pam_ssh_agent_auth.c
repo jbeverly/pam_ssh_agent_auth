@@ -63,9 +63,9 @@
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
 char           *authorized_keys_file = NULL;
-uint8_t         allow_user_owned_authorized_keys_file = 0;
 char           *authorized_keys_command = NULL;
 char           *authorized_keys_command_user = NULL;
+extern uid_t    authorized_keys_file_allowed_owner_uid;
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
 char           *__progname;
@@ -81,7 +81,6 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     char           *ruser_ptr = NULL;
     char           *servicename = NULL;
     char           *authorized_keys_file_input = NULL;
-    char            sudo_service_name[128] = "sudo";
     char            sshd_service_name[128] = "sshd";
     char            ruser[128] = "";
 
@@ -95,8 +94,21 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     facility = SYSLOG_FACILITY_AUTHPRIV;
 #endif
 
+    int             sshd_service = 0;
+    int             sshd_only = 0;
+    const char     *refused_option = NULL;
+
     UNUSED(flags);
-    pam_get_item(pamh, PAM_SERVICE, (void *) &servicename);
+
+    /* Options are per call: clear anything a previous call in this process left behind. */
+    authorized_keys_file = NULL;
+    authorized_keys_command = NULL;
+    authorized_keys_command_user = NULL;
+    authorized_keys_file_allowed_owner_uid = 0;
+
+    if(pam_get_item(pamh, PAM_SERVICE, (const void **) &servicename) != PAM_SUCCESS || servicename == NULL)
+        return PAM_AUTH_ERR;
+    sshd_service = (strncasecmp(servicename, sshd_service_name, sizeof(sshd_service_name) - 1) == 0);
 /*
  * XXX:
  * When testing on MacOS (and I presume them same would be true on other a.out systems)
@@ -114,7 +126,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
             log_lvl = SYSLOG_LEVEL_DEBUG3;
         }
         if(strncasecmp_literal(*argv_ptr, "allow_user_owned_authorized_keys_file")  == 0) {
-            allow_user_owned_authorized_keys_file = 1;
+            refused_option = "allow_user_owned_authorized_keys_file";
         }
         if(strncasecmp_literal(*argv_ptr, "file=") == 0 ) {
             authorized_keys_file_input = *argv_ptr + sizeof("file=") - 1;
@@ -125,42 +137,47 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         if(strncasecmp_literal(*argv_ptr, "authorized_keys_command_user=") == 0 ) {
             authorized_keys_command_user = *argv_ptr + sizeof("authorized_keys_command_user=") - 1;
         }
-#ifdef ENABLE_SUDO_HACK
-        if(strncasecmp_literal(*argv_ptr, "sudo_service_name=") == 0) {
-            strncpy( sudo_service_name, *argv_ptr + sizeof("sudo_service_name=") - 1, sizeof(sudo_service_name) - 1);
-        }
-#endif
     }
 
-    pamsshagentauth_log_init(__progname, log_lvl, facility, getenv("PAM_SSH_AGENT_AUTH_DEBUG") ? 1 : 0);
-    pam_get_item(pamh, PAM_USER, (void *) &user);
-    pam_get_item(pamh, PAM_RUSER, (void *) &ruser_ptr);
+    pamsshagentauth_log_init(__progname, log_lvl, facility, 0);
+    if(refused_option != NULL) {
+        /* A user who can rewrite the key file could authorize any key, so this option is refused. */
+        pamsshagentauth_logerror("option %s is not supported; refusing authentication", refused_option);
+        goto cleanexit;
+    }
+    if(pam_get_item(pamh, PAM_USER, (const void **) &user) != PAM_SUCCESS || user == NULL || *user == '\0') {
+        pamsshagentauth_verbose("PAM_USER is not set; refusing authentication");
+        goto cleanexit;
+    }
+    if(pam_get_item(pamh, PAM_RUSER, (const void **) &ruser_ptr) != PAM_SUCCESS)
+        ruser_ptr = NULL;
 
     pamsshagentauth_verbose("Beginning pam_ssh_agent_auth for user %s", user);
 
-    if(ruser_ptr) {
+    if(ruser_ptr && *ruser_ptr) {
+        if(strlen(ruser_ptr) >= sizeof(ruser)) {
+            pamsshagentauth_logerror("PAM_RUSER is too long; refusing authentication");
+            goto cleanexit;
+        }
         strncpy(ruser, ruser_ptr, sizeof(ruser) - 1);
+    } else if(sshd_service) {
+        /*
+         * sshd does not set PAM_RUSER. The key it reports in SSH_AUTH_INFO_0 was used to log in
+         * as PAM_USER, so that is the user whose keys are checked. No agent is consulted.
+         */
+        if(strlen(user) >= sizeof(ruser)) {
+            pamsshagentauth_logerror("PAM_USER is too long; refusing authentication");
+            goto cleanexit;
+        }
+        strncpy(ruser, user, sizeof(ruser) - 1);
+        sshd_only = 1;
     } else {
         /*
-         * XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX: XXX:
-         * This is a kludge to address a bug in sudo wherein PAM_RUSER is left unset at the time
-         * pam_authenticate is called, and so we cannot reliably know who invoked the process except
-         * via the SUDO_USER environment variable. I've submitted a patch to sudo which fixes this,
-         * and so this should not be enabled with versions of sudo which contain it.
+         * PAM_RUSER is the only source for the caller's name. The SUDO_USER environment
+         * variable and getuid() are not trusted here, so without PAM_RUSER we refuse.
          */
-#ifdef ENABLE_SUDO_HACK
-        if( (strlen(sudo_service_name) > 0) && strncasecmp(servicename, sudo_service_name, sizeof(sudo_service_name) - 1) == 0 && getenv("SUDO_USER") ) {
-            strncpy(ruser, getenv("SUDO_USER"), sizeof(ruser) - 1 );
-            pamsshagentauth_verbose( "Using environment variable SUDO_USER (%s)", ruser );
-        } else
-#endif
-        {
-            if( ! getpwuid(getuid()) ) {
-                pamsshagentauth_verbose("Unable to getpwuid(getuid())");
-                goto cleanexit;
-            }
-            strncpy(ruser, getpwuid(getuid())->pw_name, sizeof(ruser) - 1);
-        }
+        pamsshagentauth_verbose("PAM_RUSER is not set; refusing authentication");
+        goto cleanexit;
     }
 
     /* Might as well explicitely confirm the user exists here */
@@ -177,7 +194,8 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
         /*
          * user is the name of the target-user, and so must be used for validating the authorized_keys file
          */
-        parse_authorized_key_file(user, authorized_keys_file_input);
+        if(parse_authorized_key_file(user, authorized_keys_file_input) != 0)
+            goto cleanexit;
     } else {
         pamsshagentauth_verbose("Using default file=/etc/security/authorized_keys");
         authorized_keys_file = pamsshagentauth_xstrdup("/etc/security/authorized_keys");
@@ -195,14 +213,18 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
          * Attempt to read data from the sshd if we're being called as an auth agent.
          */
         const char* ssh_user_auth = pam_getenv(pamh, "SSH_AUTH_INFO_0");
-        int sshd_service = strncasecmp(servicename, sshd_service_name, sizeof(sshd_service_name) - 1);
-        if (sshd_service == 0 && ssh_user_auth != NULL) {
+        if (sshd_service && ssh_user_auth != NULL) {
             pamsshagentauth_verbose("Got SSH_AUTH_INFO_0: `%.20s...'", ssh_user_auth);
             if (userauth_pubkey_from_pam(ruser, ssh_user_auth) > 0) {
                 retval = PAM_SUCCESS;
                 pamsshagentauth_logit("Authenticated (sshd): `%s' as `%s' using %s", ruser, user, authorized_keys_file);
                 goto cleanexit;
             }
+        }
+
+        if (sshd_only) {
+            pamsshagentauth_logit("Failed Authentication (sshd): `%s' using %s", user, authorized_keys_file);
+            goto cleanexit;
         }
 
         /*
@@ -225,6 +247,7 @@ cleanexit:
 #endif
 
     free(authorized_keys_file);
+    authorized_keys_file = NULL;
 
     return retval;
 }

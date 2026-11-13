@@ -287,6 +287,9 @@ pamsshagentauth_key_fingerprint_raw(const Key *k, enum fp_type dgst_type,
 	case SSH_FP_SHA1:
 		md = EVP_sha1();
 		break;
+	case SSH_FP_SHA256:
+		md = EVP_sha256();
+		break;
 	default:
 		pamsshagentauth_fatal("key_fingerprint_raw: bad digest type %d",
 		    dgst_type);
@@ -1015,14 +1018,20 @@ pamsshagentauth_key_from_blob(const u_char *blob, u_int blen)
 		void *octets = NULL;
 
 		identifier = pamsshagentauth_buffer_get_string_ret(&b, NULL);
+		if (identifier == NULL) {
+			pamsshagentauth_logerror("key_from_blob: can't read ecdsa curve identifier");
+			goto out;
+		}
 
 		key = pamsshagentauth_key_new(type);
 		if ((ecdsa = EC_KEY_new_by_curve_name(pamsshagentauth_ec_group_from_name(identifier))) == NULL) {
 			pamsshagentauth_logerror("key_from_blob: can't create EC KEY");
+			pamsshagentauth_xfree(identifier);
 			pamsshagentauth_key_free(key);
 			key = NULL;
 			goto out;
 		}
+		pamsshagentauth_xfree(identifier);
 		key->ecdsa = ecdsa;
 
 		if ((octets = pamsshagentauth_buffer_get_string_ret(&b, &len)) == NULL || len == 0) {
@@ -1068,10 +1077,11 @@ pamsshagentauth_key_from_blob(const u_char *blob, u_int blen)
 		u_int len = 0;
 		key = pamsshagentauth_key_new(type);
 		void *kbits = pamsshagentauth_buffer_get_string_ret(&b, &len);
-		if (len != pamsshagentauth_key_size(key)) {
+		if (kbits == NULL || len != pamsshagentauth_key_size(key)) {
 			pamsshagentauth_logerror("key_from_blob: ed25519 key invalid (%u bytes read)",
 				len);
-			pamsshagentauth_xfree(kbits);
+			if (kbits != NULL)
+				pamsshagentauth_xfree(kbits);
 			pamsshagentauth_key_free(key);
 			key = NULL;
 			goto out;

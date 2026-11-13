@@ -70,6 +70,7 @@
 #include "log.h"
 #include "atomicio.h"
 #include "misc.h"
+#include "uidswap.h"
 
 static int agent_present = 0;
 
@@ -105,62 +106,87 @@ int
 ssh_get_authentication_socket(uid_t uid)
 {
 	const char *authsocket;
-	int sock;
+	int sock = -1;
 	struct sockaddr_un sunaddr;
-    struct stat sock_st;
+	struct stat sock_st;
+	struct passwd *pw;
 
 	authsocket = getenv(SSH_AUTHSOCKET_ENV_NAME);
 	if (!authsocket)
 		return -1;
+	if (strlen(authsocket) >= sizeof(sunaddr.sun_path)) {
+		pamsshagentauth_logerror("ssh-agent socket path is too long");
+		return -1;
+	}
+	if ((pw = getpwuid(uid)) == NULL) {
+		pamsshagentauth_logerror("ssh-agent socket: unknown uid %lu", (unsigned long) uid);
+		return -1;
+	}
 
-    /* Advisory only; seteuid ensures no race condition; but will only log if we see EACCES */
-    if( stat(authsocket,&sock_st) == 0) {
-        if(uid != 0 && sock_st.st_uid != uid) {
-            pamsshagentauth_fatal("uid %lu attempted to open an agent socket owned by uid %lu", (unsigned long) uid, (unsigned long) sock_st.st_uid);
-            return -1;
-        }
-    }
+	/*
+	 * Examine and connect to the socket as the caller: effective uid, gid and groups. The
+	 * caller then cannot probe paths it could not reach itself, nor reach a socket through
+	 * root's privileges by swapping the path between the stat and the connect.
+	 */
+	pamsshagentauth_temporarily_use_uid(pw);
 
-    /* 
-     * Ensures that the EACCES tested for below can _only_ happen if somebody 
-     * is attempting to race the stat above to bypass authentication.
-     */
-    if( (sock_st.st_mode & S_IWUSR) != S_IWUSR || (sock_st.st_mode & S_IRUSR) != S_IRUSR) {
-        pamsshagentauth_logerror("ssh-agent socket has incorrect permissions for owner");
-        return -1;
-    }
+	if (stat(authsocket, &sock_st) != 0) {
+		pamsshagentauth_logerror("ssh-agent socket cannot be examined");
+		goto out;
+	}
+	if (uid != 0 && sock_st.st_uid != uid) {
+		pamsshagentauth_logerror("uid %lu attempted to open an agent socket owned by uid %lu",
+		    (unsigned long) uid, (unsigned long) sock_st.st_uid);
+		goto out;
+	}
+	if (!S_ISSOCK(sock_st.st_mode) ||
+	    (sock_st.st_mode & S_IWUSR) != S_IWUSR || (sock_st.st_mode & S_IRUSR) != S_IRUSR) {
+		pamsshagentauth_logerror("ssh-agent socket is not a socket or has incorrect permissions for owner");
+		goto out;
+	}
 
 	sunaddr.sun_family = AF_UNIX;
 	pamsshagentauth_strlcpy(sunaddr.sun_path, authsocket, sizeof(sunaddr.sun_path));
 
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock < 0)
-		return -1;
+		goto out;
 
 	/* close on exec */
 	if (fcntl(sock, F_SETFD, 1) == -1) {
 		close(sock);
-		return -1;
+		sock = -1;
+		goto out;
 	}
 
-    errno = 0; 
-    /* To ensure a race condition is not used to circumvent the stat
-       above, we will temporarily drop UID to the caller */
-    if (seteuid(uid) < 0)
-        return -1;
-
+	errno = 0;
 	if (connect(sock, (struct sockaddr *)&sunaddr, sizeof sunaddr) < 0) {
+		if (errno == EACCES)
+			pamsshagentauth_logerror("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
 		close(sock);
-        if(errno == EACCES)
-            pamsshagentauth_fatal("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
-		return -1;
+		sock = -1;
+		goto out;
 	}
 
-    /* we now continue the regularly scheduled programming */
-    if (seteuid(0) < 0)
-        return -1;
+#ifdef SO_PEERCRED
+	/* The agent at the other end must be running as the caller (or the caller is root). */
+	{
+		struct ucred cred;
+		socklen_t credlen = sizeof(cred);
+
+		if (getsockopt(sock, SOL_SOCKET, SO_PEERCRED, &cred, &credlen) != 0 ||
+		    (uid != 0 && cred.uid != uid)) {
+			pamsshagentauth_logerror("ssh-agent socket peer is not uid %lu", (unsigned long) uid);
+			close(sock);
+			sock = -1;
+			goto out;
+		}
+	}
+#endif
 
 	agent_present = 1;
+out:
+	pamsshagentauth_restore_uid();
 	return sock;
 }
 
@@ -192,8 +218,10 @@ ssh_request_reply(AuthenticationConnection *auth, Buffer *request, Buffer *reply
 
 	/* Extract the length, and check it for sanity. */
 	len = pamsshagentauth_get_u32(buf);
-	if (len > 256 * 1024)
-		pamsshagentauth_fatal("Authentication response too long: %u", len);
+	if (len > 256 * 1024) {
+		pamsshagentauth_logerror("Authentication response too long: %u", len);
+		return 0;
+	}
 
 	/* Read the rest of the response in to the buffer. */
 	pamsshagentauth_buffer_clear(reply);
@@ -326,18 +354,36 @@ ssh_get_num_identities(AuthenticationConnection *auth, int version)
 	pamsshagentauth_buffer_free(&request);
 
 	/* Get message type, and verify that we got a proper answer. */
-	type = pamsshagentauth_buffer_get_char(&auth->identities);
+	{
+		char ch;
+
+		if (pamsshagentauth_buffer_get_char_ret(&ch, &auth->identities) == -1) {
+			pamsshagentauth_logerror("Malformed authentication reply: no message type");
+			return 0;
+		}
+		type = (u_char)ch;
+	}
 	if (agent_failed(type)) {
 		return 0;
 	} else if (type != code2) {
-		pamsshagentauth_fatal("Bad authentication reply message type: %d", type);
+		pamsshagentauth_logerror("Bad authentication reply message type: %d", type);
+		return 0;
 	}
 
 	/* Get the number of entries in the response and check it for sanity. */
-	auth->howmany = pamsshagentauth_buffer_get_int(&auth->identities);
-	if ((u_int)auth->howmany > 1024)
-		pamsshagentauth_fatal("Too many identities in authentication reply: %d",
-		    auth->howmany);
+	{
+		u_int n;
+
+		if (pamsshagentauth_buffer_get_int_ret(&n, &auth->identities) == -1) {
+			pamsshagentauth_logerror("Malformed authentication reply: no identity count");
+			return 0;
+		}
+		if (n > 1024) {
+			pamsshagentauth_logerror("Too many identities in authentication reply: %u", n);
+			return 0;
+		}
+		auth->howmany = (int)n;
+	}
 
 	return auth->howmany;
 }
@@ -391,12 +437,31 @@ ssh_get_next_identity(AuthenticationConnection *auth, char **comment, int versio
 #endif
 		break;
 	case 2:
-		blob = pamsshagentauth_buffer_get_string(&auth->identities, &blen);
-		*comment = pamsshagentauth_buffer_get_string(&auth->identities, NULL);
+		blob = pamsshagentauth_buffer_get_string_ret(&auth->identities, &blen);
+		if (blob == NULL) {
+			pamsshagentauth_logerror("Malformed authentication reply: bad identity blob");
+			/* The stream is unparseable from here on: stop iterating. */
+			auth->howmany = 0;
+			return NULL;
+		}
+		*comment = pamsshagentauth_buffer_get_string_ret(&auth->identities, NULL);
+		if (*comment == NULL) {
+			pamsshagentauth_logerror("Malformed authentication reply: bad identity comment");
+			pamsshagentauth_xfree(blob);
+			auth->howmany = 0;
+			return NULL;
+		}
 		key = pamsshagentauth_key_from_blob(blob, blen);
 		pamsshagentauth_xfree(blob);
+		if (key == NULL) {
+			/* Skip this identity; the caller keeps asking while entries remain. */
+			pamsshagentauth_logerror("Skipping an identity the module cannot parse: %s", *comment);
+			pamsshagentauth_xfree(*comment);
+			*comment = NULL;
+		}
 		break;
 	default:
+		auth->howmany = 0;
 		return NULL;
 	}
 	/* Decrement the number of remaining entries. */
@@ -454,7 +519,7 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 	if (agent_failed(type)) {
 		pamsshagentauth_logit("Agent admitted failure to authenticate using the key.");
 	} else if (type != SSH_AGENT_RSA_RESPONSE) {
-		pamsshagentauth_fatal("Bad authentication response: %d", type);
+		pamsshagentauth_logerror("Bad authentication response: %d", type);
 	} else {
 		success = 1;
 		/*
@@ -468,25 +533,21 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 	return success;
 }
 
-/* ask agent to sign data, returns -1 on error, 0 on success */
-int
-ssh_agent_sign(AuthenticationConnection *auth,
+/* ask agent to sign data with the given flags, returns -1 on error, 0 on success */
+static int
+ssh_agent_sign_flags(AuthenticationConnection *auth,
     Key *key,
     u_char **sigp, u_int *lenp,
-    u_char *data, u_int datalen)
+    u_char *data, u_int datalen, int flags)
 {
-	extern int datafellows;
 	Buffer msg;
 	u_char *blob;
 	u_int blen;
-	int type, flags = 0;
+	int type;
 	int ret = -1;
 
 	if (pamsshagentauth_key_to_blob(key, &blob, &blen) == 0)
 		return -1;
-
-	if (datafellows & SSH_BUG_SIGBLOB)
-		flags = SSH_AGENT_OLD_SIGNATURE;
 
 	pamsshagentauth_buffer_init(&msg);
 	pamsshagentauth_buffer_put_char(&msg, SSH2_AGENTC_SIGN_REQUEST);
@@ -499,17 +560,55 @@ ssh_agent_sign(AuthenticationConnection *auth,
 		pamsshagentauth_buffer_free(&msg);
 		return -1;
 	}
-	type = pamsshagentauth_buffer_get_char(&msg);
+	{
+		char ch;
+
+		if (pamsshagentauth_buffer_get_char_ret(&ch, &msg) == -1) {
+			pamsshagentauth_logerror("Malformed authentication reply: no message type");
+			pamsshagentauth_buffer_free(&msg);
+			return -1;
+		}
+		type = (u_char)ch;
+	}
 	if (agent_failed(type)) {
 		pamsshagentauth_logit("Agent admitted failure to sign using the key.");
 	} else if (type != SSH2_AGENT_SIGN_RESPONSE) {
-		pamsshagentauth_fatal("Bad authentication response: %d", type);
+		pamsshagentauth_logerror("Bad authentication response: %d", type);
 	} else {
-		ret = 0;
-		*sigp = pamsshagentauth_buffer_get_string(&msg, lenp);
+		*sigp = pamsshagentauth_buffer_get_string_ret(&msg, lenp);
+		if (*sigp != NULL)
+			ret = 0;
+		else
+			pamsshagentauth_logerror("Malformed authentication reply: bad signature");
 	}
 	pamsshagentauth_buffer_free(&msg);
 	return ret;
+}
+
+/* ask agent to sign data, returns -1 on error, 0 on success */
+int
+ssh_agent_sign(AuthenticationConnection *auth,
+    Key *key,
+    u_char **sigp, u_int *lenp,
+    u_char *data, u_int datalen)
+{
+	extern int datafellows;
+	int flags = 0;
+
+	if (datafellows & SSH_BUG_SIGBLOB)
+		flags = SSH_AGENT_OLD_SIGNATURE;
+
+	if (key->type == KEY_RSA) {
+		/*
+		 * Ask for an rsa-sha2-256 signature: SHA-1 signatures are refused under FIPS and
+		 * stricter crypto policies. Agents that refuse the flag get the old ssh-rsa request.
+		 */
+		if (ssh_agent_sign_flags(auth, key, sigp, lenp, data, datalen,
+		    flags | SSH_AGENT_RSA_SHA2_256) == 0)
+			return 0;
+		pamsshagentauth_verbose("agent did not return an rsa-sha2-256 signature; retrying with ssh-rsa");
+	}
+	return ssh_agent_sign_flags(auth, key, sigp, lenp, data, datalen, flags);
 }
 
 /* Encode key for a message to the agent. */
@@ -756,7 +855,8 @@ pamsshagentauth_decode_reply(int type)
 	case SSH_AGENT_SUCCESS:
 		return 1;
 	default:
-		pamsshagentauth_fatal("Bad response from authentication agent: %d", type);
+		pamsshagentauth_logerror("Bad response from authentication agent: %d", type);
+		return 0;
 	}
 	/* NOTREACHED */
 	return 0;

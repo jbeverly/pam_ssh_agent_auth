@@ -56,9 +56,9 @@ ssh_rsa_sign(const Key *key, u_char **sigp, u_int *lenp,
 		return -1;
 	}
 	md = EVP_MD_CTX_create();
-	EVP_DigestInit(&md, evp_md);
-	EVP_DigestUpdate(&md, data, datalen);
-	EVP_DigestFinal(&md, digest, &dlen);
+	EVP_DigestInit(md, evp_md);
+	EVP_DigestUpdate(md, data, datalen);
+	EVP_DigestFinal(md, digest, &dlen);
 
 	slen = RSA_size(key->rsa);
 	sig = pamsshagentauth_xmalloc(slen);
@@ -134,15 +134,32 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	}
 	pamsshagentauth_buffer_init(&b);
 	pamsshagentauth_buffer_append(&b, signature, signaturelen);
-	ktype = pamsshagentauth_buffer_get_string(&b, NULL);
-	if (strcmp("ssh-rsa", ktype) != 0) {
+	ktype = pamsshagentauth_buffer_get_string_ret(&b, NULL);
+	if (ktype == NULL) {
+		pamsshagentauth_logerror("ssh_rsa_verify: malformed signature");
+		pamsshagentauth_buffer_free(&b);
+		return -1;
+	}
+	/* RFC 8332: rsa-sha2-256 and rsa-sha2-512 signatures, alongside the original ssh-rsa (SHA-1). */
+	if (strcmp("ssh-rsa", ktype) == 0) {
+		nid = (datafellows & SSH_BUG_RSASIGMD5) ? NID_md5 : NID_sha1;
+	} else if (strcmp("rsa-sha2-256", ktype) == 0) {
+		nid = NID_sha256;
+	} else if (strcmp("rsa-sha2-512", ktype) == 0) {
+		nid = NID_sha512;
+	} else {
 		pamsshagentauth_logerror("ssh_rsa_verify: cannot handle type %s", ktype);
 		pamsshagentauth_buffer_free(&b);
 		pamsshagentauth_xfree(ktype);
 		return -1;
 	}
 	pamsshagentauth_xfree(ktype);
-	sigblob = pamsshagentauth_buffer_get_string(&b, &len);
+	sigblob = pamsshagentauth_buffer_get_string_ret(&b, &len);
+	if (sigblob == NULL) {
+		pamsshagentauth_logerror("ssh_rsa_verify: malformed signature");
+		pamsshagentauth_buffer_free(&b);
+		return -1;
+	}
 	rlen = pamsshagentauth_buffer_len(&b);
 	pamsshagentauth_buffer_free(&b);
 	if (rlen != 0) {
@@ -165,16 +182,16 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		memset(sigblob, 0, diff);
 		len = modlen;
 	}
-	nid = (datafellows & SSH_BUG_RSASIGMD5) ? NID_md5 : NID_sha1;
 	if ((evp_md = EVP_get_digestbynid(nid)) == NULL) {
 		pamsshagentauth_logerror("ssh_rsa_verify: EVP_get_digestbynid %d failed", nid);
 		pamsshagentauth_xfree(sigblob);
 		return -1;
 	}
-	md = EVP_MD_CTX_create();
-	EVP_DigestInit(md, evp_md);
-	EVP_DigestUpdate(md, data, datalen);
-	EVP_DigestFinal(md, digest, &dlen);
+	if ((md = EVP_MD_CTX_create()) == NULL ||
+	    EVP_DigestInit(md, evp_md) != 1 ||
+	    EVP_DigestUpdate(md, data, datalen) != 1 ||
+	    EVP_DigestFinal(md, digest, &dlen) != 1)
+		pamsshagentauth_fatal("ssh_rsa_verify: digest failed");
 
 	ret = openssh_RSA_verify(nid, digest, dlen, sigblob, len, key->rsa);
 	memset(digest, 'd', sizeof(digest));
@@ -214,6 +231,15 @@ static const u_char id_md5[] = {
 	0x05, 0x00, /* NULL */
 	0x04, 0x10  /* Octet string, length 0x10 (16), followed by md5 hash */
 };
+/* DigestInfo prefixes for SHA-256 and SHA-512, RFC 8017 section 9.2 note 1. */
+static const u_char id_sha256[] = {
+	0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+	0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20
+};
+static const u_char id_sha512[] = {
+	0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+	0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40
+};
 
 static int
 openssh_RSA_verify(int type, u_char *hash, u_int hashlen,
@@ -235,6 +261,16 @@ openssh_RSA_verify(int type, u_char *hash, u_int hashlen,
 		oid = id_md5;
 		oidlen = sizeof(id_md5);
 		hlen = 16;
+		break;
+	case NID_sha256:
+		oid = id_sha256;
+		oidlen = sizeof(id_sha256);
+		hlen = 32;
+		break;
+	case NID_sha512:
+		oid = id_sha512;
+		oidlen = sizeof(id_sha512);
+		hlen = 64;
 		break;
 	default:
 		goto done;

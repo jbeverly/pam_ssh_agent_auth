@@ -61,8 +61,9 @@ Specify the path to the authorized_keys file(s) you would like to use for authen
 
 =item allow_user_owned_authorized_keys_file
 
-A flag which enables authorized_keys files to be owned by the invoking user, instead of root. This flag is enabled automatically whenever
-the expansions %h or ~ are used.
+Not supported. If this option is present, authentication is refused: a user who can rewrite the authorized_keys
+file can authorize any key. Files reached through the expansions ~ and %h may still be owned by that user (see
+EXPANSIONS).
 
 =item authorized_keys_command=<path to executable>
 
@@ -71,23 +72,18 @@ This is ideally suited for use with sssd's sss_ssh_authorizedkeys, for authentic
 
 =item authorized_keys_command_user=<username>
 
-Specify a user to run the authorized_keys_command as. If this option is not specified, the authorized_keys_command will be run as the user being authenticated.
+Specify a dedicated user to run the authorized_keys_command as. This option is required: without it, or if it
+names the calling user, the command is not run. The command runs with only that user's primary group and a
+fixed PATH; it does not inherit the caller's environment.
 
 =item debug
 
 A flag which enables verbose logging
 
-=item sudo_service_name=<service name you compiled sudo to use> 
-
-(when compiled with --enable-sudo-hack)
-
-Specify the service name to use to identify the service "sudo". When the PAM_SERVICE identifier matches this 
-string, and if PAM_RUSER is not set, pam_ssh_agent_auth will attempt to identify the calling user from the 
-environment variable SUDO_USER. 
-
-This defaults to "sudo".
-
 =back
+
+The calling user is taken from PAM_RUSER, which sudo sets. If PAM_RUSER is not set, authentication fails,
+except for the sshd service, where the key sshd reports in SSH_AUTH_INFO_0 is checked for PAM_USER.
 
 =head1 EXPANSIONS
 
@@ -95,11 +91,11 @@ This defaults to "sudo".
 
 =item ~  -- same as in shells, a user's Home directory
 
-Automatically enables allow_user_owned_authorized_keys_file if used in the context of ~/. If used as ~user/, it would expect the file to be owned by 'user', unless you explicitly set allow_user_owned_authorized_keys_file
+Used as ~/, the file may be owned by the target user. Used as ~user/, the file must be owned by 'user'.
 
 =item %h -- User's Home directory
 
-Automatically enables allow_user_owned_authorized_keys_file
+The file may be owned by the target user.
 
 =item %H -- The short-hostname
 
@@ -125,23 +121,14 @@ Same as above.
 
 =item C<auth sufficient pam_ssh_agent_auth.so file=~fred/.ssh/authorized_keys>
 
-If the home-directory of user 'fred' was /home/fred, this would expand to /home/fred/.ssh/authorized_keys.
-In this case, we have not specified allow_user_owned_authorized_keys_file, 
-so this file must be owned by 'fred'.
-
-=item C<auth sufficient pam_ssh_agent_auth.so file=/secure/%H/%u/authorized_keys allow_user_owned_authorized_keys_file>
-
-On a host named foobar.baz.com, and a user named fred,
-would expand to /secure/foobar/fred/authorized_keys.
-In this case, we specified allow_user_owned_authorized_keys_file, 
-so fred would be able to manage that authorized_keys file himself. 
+If the home-directory of user 'fred' was /home/fred, this would expand to /home/fred/.ssh/authorized_keys,
+and this file must be owned by 'fred'.
 
 =item C<auth sufficient pam_ssh_agent_auth.so file=/secure/%f/%u/authorized_keys>
 
-On a host named foobar.baz.com, and a user named fred, 
-would expand to /secure/foobar.baz.com/fred/authorized_keys.
-In this case, we have not specified allow_user_owned_authorized_keys_file, 
-so this file must be owned by root.
+On a host named foobar.baz.com, and a user named fred,
+would expand to /secure/foobar.baz.com/fred/authorized_keys,
+and this file must be owned by root.
 
 =item C<auth [success=3 default=ignore] pam_ssh_agent_auth.so file=~/.ssh/authorized_keys debug>
 

@@ -166,7 +166,10 @@ pamsshagentauth_buffer_get_string_ret(Buffer *buffer, u_int *length_ptr)
 	u_int len;
 
 	/* Get the length. */
-	len = pamsshagentauth_buffer_get_int(buffer);
+	if (pamsshagentauth_buffer_get_int_ret(&len, buffer) == -1) {
+		pamsshagentauth_logerror("buffer_get_string_ret: missing string length");
+		return (NULL);
+	}
 	if (len > 256 * 1024) {
 		pamsshagentauth_logerror("buffer_get_string_ret: bad string length %u", len);
 		return (NULL);

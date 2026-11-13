@@ -73,7 +73,7 @@ ssh_ecdsa_sign(const Key *key, u_char **sigp, u_int *lenp,
     if (pamsshagentauth_buffer_get_bignum2_ret(&bb, sig->r) == -1 ||
         pamsshagentauth_buffer_get_bignum2_ret(&bb, sig->s) == -1) {
 #else
-    DSA_SIG_get0(sig, &r, &s);
+    DSA_SIG_get0((const DSA_SIG*)sig, (const BIGNUM **)&r, (const BIGNUM **)&s);
     if (pamsshagentauth_buffer_get_bignum2_ret(&bb, r) == -1 ||
         pamsshagentauth_buffer_get_bignum2_ret(&bb, s) == -1) {
 #endif
@@ -123,9 +123,19 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
     pamsshagentauth_buffer_init(&b);
     pamsshagentauth_buffer_append(&b, signature, signaturelen);
 
-    ktype = pamsshagentauth_buffer_get_string(&b, NULL);
+    ktype = pamsshagentauth_buffer_get_string_ret(&b, NULL);
+    if (ktype == NULL) {
+        pamsshagentauth_logerror("ssh_ecdsa_verify: malformed signature");
+        pamsshagentauth_buffer_free(&b);
+        return -1;
+    }
     pamsshagentauth_xfree(ktype);
-    sigblob = pamsshagentauth_buffer_get_string(&b, &len);
+    sigblob = pamsshagentauth_buffer_get_string_ret(&b, &len);
+    if (sigblob == NULL) {
+        pamsshagentauth_logerror("ssh_ecdsa_verify: malformed signature");
+        pamsshagentauth_buffer_free(&b);
+        return -1;
+    }
     rlen = pamsshagentauth_buffer_len(&b);
     pamsshagentauth_buffer_free(&b);
     if (rlen != 0) {
@@ -143,18 +153,32 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
     pamsshagentauth_buffer_append(&b, sigblob, len);
 #if OPENSSL_VERSION_NUMBER < 0x10100005L
     if ((pamsshagentauth_buffer_get_bignum2_ret(&b, sig->r) == -1) ||
-        (pamsshagentauth_buffer_get_bignum2_ret(&b, sig->s) == -1))
-        pamsshagentauth_fatal("ssh_ecdsa_verify:"
+        (pamsshagentauth_buffer_get_bignum2_ret(&b, sig->s) == -1)) {
+        pamsshagentauth_logerror("ssh_ecdsa_verify: "
             "pamsshagentauth_buffer_get_bignum2_ret failed");
+        pamsshagentauth_buffer_free(&b);
+        ECDSA_SIG_free(sig);
+        memset(sigblob, 0, len);
+        pamsshagentauth_xfree(sigblob);
+        return -1;
+    }
 #else
     if ((r = BN_new()) == NULL)
         pamsshagentauth_fatal("ssh_ecdsa_verify: BN_new failed");
     if ((s = BN_new()) == NULL)
         pamsshagentauth_fatal("ssh_ecdsa_verify: BN_new failed");
     if ((pamsshagentauth_buffer_get_bignum2_ret(&b, r) == -1) ||
-        (pamsshagentauth_buffer_get_bignum2_ret(&b, s) == -1))
-        pamsshagentauth_fatal("ssh_ecdsa_verify:"
+        (pamsshagentauth_buffer_get_bignum2_ret(&b, s) == -1)) {
+        pamsshagentauth_logerror("ssh_ecdsa_verify: "
             "pamsshagentauth_buffer_get_bignum2_ret failed");
+        pamsshagentauth_buffer_free(&b);
+        BN_free(r);
+        BN_free(s);
+        ECDSA_SIG_free(sig);
+        memset(sigblob, 0, len);
+        pamsshagentauth_xfree(sigblob);
+        return -1;
+    }
     if (ECDSA_SIG_set0(sig, r, s) != 1)
         pamsshagentauth_fatal("ssh_ecdsa_verify: ECDSA_SIG_set0 failed");
 #endif
@@ -164,10 +188,11 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
     pamsshagentauth_xfree(sigblob);
 
     /* sha256 the data */
-    md = EVP_MD_CTX_create();
-    EVP_DigestInit(md, evp_md);
-    EVP_DigestUpdate(md, data, datalen);
-    EVP_DigestFinal(md, digest, &dlen);
+    if ((md = EVP_MD_CTX_create()) == NULL ||
+        EVP_DigestInit(md, evp_md) != 1 ||
+        EVP_DigestUpdate(md, data, datalen) != 1 ||
+        EVP_DigestFinal(md, digest, &dlen) != 1)
+        pamsshagentauth_fatal("ssh_ecdsa_verify: digest failed");
 
     ret = ECDSA_do_verify(digest, dlen, sig, key->ecdsa);
     memset(digest, 'd', sizeof(digest));
