@@ -36,6 +36,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
+#include <grp.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <signal.h>
@@ -173,24 +174,38 @@ pamsshagentauth_user_key_command_allowed2(char *authorized_keys_command,
     
 
 
+    uid_t caller_uid;
+
     if(authorized_keys_command == NULL || authorized_keys_command[0] != '/')
         return 0;
 
+    if(user_pw == NULL)
+        return 0;
+
+    /*
+     * The command must run as a dedicated account. Run as the caller, its process could be
+     * traced or rewritten by the caller, who could then supply their own key.
+     */
+    if(authorized_keys_command_user == NULL) {
+        pamsshagentauth_logerror("authorized_keys_command requires authorized_keys_command_user; not running %s",
+                                 authorized_keys_command);
+        return 0;
+    }
 
     /* getpwnam of authorized_keys_command_user will overwrite the statics used by getpwnam (including pw_name) */
     strncpy(username, user_pw->pw_name, sizeof(username) - 1);
+    caller_uid = user_pw->pw_uid;
 
-    /* If no user specified to run commands the default to target user */
-    if(authorized_keys_command_user == NULL) {
-        pw = user_pw;
+    pw = getpwnam(authorized_keys_command_user);
+    if(pw == NULL) {
+        pamsshagentauth_logerror("authorized_keys_command_user \"%s\" not found: %s",
+             authorized_keys_command_user, strerror(errno));
+        return 0;
     }
-    else {
-        pw = getpwnam(authorized_keys_command_user);
-        if(pw == NULL) {
-            pamsshagentauth_logerror("authorized_keys_command_user \"%s\" not found: %s",
-                 authorized_keys_command_user, strerror(errno));
-            return 0;
-        }
+    if(pw->pw_uid == caller_uid) {
+        pamsshagentauth_logerror("authorized_keys_command_user \"%s\" is the calling user; not running %s",
+                                 authorized_keys_command_user, authorized_keys_command);
+        return 0;
     }
 
     pamsshagentauth_temporarily_use_uid(pw);
@@ -243,6 +258,12 @@ pamsshagentauth_user_key_command_allowed2(char *authorized_keys_command,
             pamsshagentauth_logerror("%s: dup2: %s", __func__, strerror(errno));
             _exit(1);
         }
+        /* Drop the supplementary groups inherited from the PAM caller. */
+        if(setgroups(1, &pw->pw_gid) != 0) {
+            pamsshagentauth_logerror("setgroups %u: %s", (u_int) pw->pw_gid,
+                                     strerror(errno));
+            _exit(1);
+        }
 #if defined(HAVE_SETRESGID) && !defined(BROKEN_SETRESGID)
         if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) != 0) {
 #else
@@ -266,7 +287,13 @@ pamsshagentauth_user_key_command_allowed2(char *authorized_keys_command,
         close(p[0]);
         closefrom(STDERR_FILENO + 1);
 
-        execl(authorized_keys_command, authorized_keys_command, username, (char *)NULL);
+        {
+            /* Do not pass the PAM caller's environment (LD_PRELOAD, PATH, ...) to the command. */
+            char *const child_argv[] = { authorized_keys_command, username, NULL };
+            char *const child_envp[] = { "PATH=/usr/sbin:/usr/bin:/sbin:/bin", NULL };
+
+            execve(authorized_keys_command, child_argv, child_envp);
+        }
 
         /* pretty sure this will barf because we are now suid, but since we
            should't reach this anyway, I'll leave it here */
