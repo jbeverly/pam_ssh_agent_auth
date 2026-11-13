@@ -356,6 +356,19 @@ AC_CHECK_HEADERS(login_cap.h, [], [], [
 
 LDFLAGS_SHARED="-shared"
 
+# Export only the PAM entry points from the module, when the linker accepts a version script.
+AC_MSG_CHECKING([whether the linker accepts a version script])
+saved_LDFLAGS="$LDFLAGS"
+LDFLAGS="$LDFLAGS -shared -Wl,--version-script=$srcdir/pam_ssh_agent_auth.map"
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
+int pam_sm_authenticate(void) { return 0; }
+int pam_sm_setcred(void) { return 0; }
+]])],
+	[AC_MSG_RESULT([yes])
+	 LDFLAGS_SHARED="$LDFLAGS_SHARED -Wl,--version-script=\$(srcdir)/pam_ssh_agent_auth.map"],
+	[AC_MSG_RESULT([no])])
+LDFLAGS="$saved_LDFLAGS"
+
 # Messages for features tested for in target-specific section
 SIA_MSG="no"
 SPC_MSG="no"

@@ -1,0 +1,8 @@
+/* Export only the PAM entry points; everything else in the module stays local. */
+{
+  global:
+    pam_sm_authenticate;
+    pam_sm_setcred;
+  local:
+    *;
+};
