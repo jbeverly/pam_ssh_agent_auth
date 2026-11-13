@@ -128,7 +128,9 @@ pamsshagentauth_user_key_allowed2(struct passwd *pw, Key * key, char *file)
     struct stat st;
     char buf[SSH_MAX_PUBKEY_BYTES];
 
-    /* Temporarily use the user's uid. */
+    if(pw == NULL || file == NULL)
+        return 0;
+
     pamsshagentauth_verbose("trying public key file %s", file);
 
     /* Fail not so quietly if file does not exist */

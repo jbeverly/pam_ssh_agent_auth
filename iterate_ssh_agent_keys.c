@@ -185,7 +185,14 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
     AuthenticationConnection *ac;
     char *comment;
     uint8_t retval = 0;
-    uid_t uid = getpwnam(ruser)->pw_uid;
+    struct passwd *ruser_pw;
+    uid_t uid;
+
+    if((ruser_pw = getpwnam(ruser)) == NULL) {
+        pamsshagentauth_logerror("find_authorized_keys: unknown user %s", ruser);
+        return 0;
+    }
+    uid = ruser_pw->pw_uid;
 
     OpenSSL_add_all_digests();
     pamsshagentauth_session_id2_gen(&session_id2, user, ruser, servicename);
