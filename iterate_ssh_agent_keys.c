@@ -41,6 +41,7 @@
 #include "authfd.h"
 #include <stdio.h>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 #include "ssh2.h"
 #include "misc.h"
 
@@ -81,13 +82,12 @@ agent_action(Buffer *buf, char ** action, size_t count)
 }
 
 
-void
+/* Returns 0 on success, -1 if no random cookie could be generated. */
+static int
 pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
                                 const char * ruser, const char * servicename)
 {
     char *cookie = NULL;
-    uint8_t i = 0;
-    uint32_t rnd = 0;
     uint8_t cookie_len;
     char hostname[256] = { 0 };
     char pwd[1024] = { 0 };
@@ -100,20 +100,21 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     char * retc;
     int32_t reti;
 
-    rnd = pamsshagentauth_arc4random();
-    cookie_len = ((uint8_t) rnd);
-    while (cookie_len < 16) { 
+    /* The challenge cookie comes straight from OpenSSL's CSPRNG. */
+    if (RAND_bytes(&cookie_len, 1) != 1) {
+        pamsshagentauth_logerror("session_id2_gen: RAND_bytes failed");
+        return -1;
+    }
+    while (cookie_len < 16) {
         cookie_len += 16;                                          /* Add 16 bytes to the size to ensure that while the length is random, the length is always reasonable; ticket #18 */
     }
 
     cookie = pamsshagentauth_xcalloc(1,cookie_len);
 
-    for (i = 0; i < cookie_len; i++) {
-        if (i % 4 == 0) {
-            rnd = pamsshagentauth_arc4random();
-        }
-        cookie[i] = (char) rnd;
-        rnd >>= 8;
+    if (RAND_bytes((unsigned char *) cookie, cookie_len) != 1) {
+        pamsshagentauth_logerror("session_id2_gen: RAND_bytes failed");
+        free(cookie);
+        return -1;
     }
 
     count = pamsshagentauth_get_command_line(&reported_argv);
@@ -173,7 +174,7 @@ pamsshagentauth_session_id2_gen(Buffer * session_id2, const char * user,
     pamsshagentauth_buffer_put_int64(session_id2, (uint64_t) ts);
 
     free(cookie);
-    return;
+    return 0;
 }
 
 int
@@ -195,7 +196,8 @@ pamsshagentauth_find_authorized_keys(const char * user, const char * ruser, cons
     uid = ruser_pw->pw_uid;
 
     OpenSSL_add_all_digests();
-    pamsshagentauth_session_id2_gen(&session_id2, user, ruser, servicename);
+    if (pamsshagentauth_session_id2_gen(&session_id2, user, ruser, servicename) != 0)
+        return 0;
 
     if ((ac = ssh_get_authentication_connection(uid))) {
         pamsshagentauth_verbose("Contacted ssh-agent of user %s (%u)", ruser, uid);
