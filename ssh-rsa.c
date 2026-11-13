@@ -140,7 +140,14 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		pamsshagentauth_buffer_free(&b);
 		return -1;
 	}
-	if (strcmp("ssh-rsa", ktype) != 0) {
+	/* RFC 8332: rsa-sha2-256 and rsa-sha2-512 signatures, alongside the original ssh-rsa (SHA-1). */
+	if (strcmp("ssh-rsa", ktype) == 0) {
+		nid = (datafellows & SSH_BUG_RSASIGMD5) ? NID_md5 : NID_sha1;
+	} else if (strcmp("rsa-sha2-256", ktype) == 0) {
+		nid = NID_sha256;
+	} else if (strcmp("rsa-sha2-512", ktype) == 0) {
+		nid = NID_sha512;
+	} else {
 		pamsshagentauth_logerror("ssh_rsa_verify: cannot handle type %s", ktype);
 		pamsshagentauth_buffer_free(&b);
 		pamsshagentauth_xfree(ktype);
@@ -175,7 +182,6 @@ ssh_rsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 		memset(sigblob, 0, diff);
 		len = modlen;
 	}
-	nid = (datafellows & SSH_BUG_RSASIGMD5) ? NID_md5 : NID_sha1;
 	if ((evp_md = EVP_get_digestbynid(nid)) == NULL) {
 		pamsshagentauth_logerror("ssh_rsa_verify: EVP_get_digestbynid %d failed", nid);
 		pamsshagentauth_xfree(sigblob);
@@ -225,6 +231,15 @@ static const u_char id_md5[] = {
 	0x05, 0x00, /* NULL */
 	0x04, 0x10  /* Octet string, length 0x10 (16), followed by md5 hash */
 };
+/* DigestInfo prefixes for SHA-256 and SHA-512, RFC 8017 section 9.2 note 1. */
+static const u_char id_sha256[] = {
+	0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+	0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20
+};
+static const u_char id_sha512[] = {
+	0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+	0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40
+};
 
 static int
 openssh_RSA_verify(int type, u_char *hash, u_int hashlen,
@@ -246,6 +261,16 @@ openssh_RSA_verify(int type, u_char *hash, u_int hashlen,
 		oid = id_md5;
 		oidlen = sizeof(id_md5);
 		hlen = 16;
+		break;
+	case NID_sha256:
+		oid = id_sha256;
+		oidlen = sizeof(id_sha256);
+		hlen = 32;
+		break;
+	case NID_sha512:
+		oid = id_sha512;
+		oidlen = sizeof(id_sha512);
+		hlen = 64;
 		break;
 	default:
 		goto done;

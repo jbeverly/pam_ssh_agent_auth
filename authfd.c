@@ -514,25 +514,21 @@ ssh_decrypt_challenge(AuthenticationConnection *auth,
 	return success;
 }
 
-/* ask agent to sign data, returns -1 on error, 0 on success */
-int
-ssh_agent_sign(AuthenticationConnection *auth,
+/* ask agent to sign data with the given flags, returns -1 on error, 0 on success */
+static int
+ssh_agent_sign_flags(AuthenticationConnection *auth,
     Key *key,
     u_char **sigp, u_int *lenp,
-    u_char *data, u_int datalen)
+    u_char *data, u_int datalen, int flags)
 {
-	extern int datafellows;
 	Buffer msg;
 	u_char *blob;
 	u_int blen;
-	int type, flags = 0;
+	int type;
 	int ret = -1;
 
 	if (pamsshagentauth_key_to_blob(key, &blob, &blen) == 0)
 		return -1;
-
-	if (datafellows & SSH_BUG_SIGBLOB)
-		flags = SSH_AGENT_OLD_SIGNATURE;
 
 	pamsshagentauth_buffer_init(&msg);
 	pamsshagentauth_buffer_put_char(&msg, SSH2_AGENTC_SIGN_REQUEST);
@@ -568,6 +564,32 @@ ssh_agent_sign(AuthenticationConnection *auth,
 	}
 	pamsshagentauth_buffer_free(&msg);
 	return ret;
+}
+
+/* ask agent to sign data, returns -1 on error, 0 on success */
+int
+ssh_agent_sign(AuthenticationConnection *auth,
+    Key *key,
+    u_char **sigp, u_int *lenp,
+    u_char *data, u_int datalen)
+{
+	extern int datafellows;
+	int flags = 0;
+
+	if (datafellows & SSH_BUG_SIGBLOB)
+		flags = SSH_AGENT_OLD_SIGNATURE;
+
+	if (key->type == KEY_RSA) {
+		/*
+		 * Ask for an rsa-sha2-256 signature: SHA-1 signatures are refused under FIPS and
+		 * stricter crypto policies. Agents that refuse the flag get the old ssh-rsa request.
+		 */
+		if (ssh_agent_sign_flags(auth, key, sigp, lenp, data, datalen,
+		    flags | SSH_AGENT_RSA_SHA2_256) == 0)
+			return 0;
+		pamsshagentauth_verbose("agent did not return an rsa-sha2-256 signature; retrying with ssh-rsa");
+	}
+	return ssh_agent_sign_flags(auth, key, sigp, lenp, data, datalen, flags);
 }
 
 /* Encode key for a message to the agent. */

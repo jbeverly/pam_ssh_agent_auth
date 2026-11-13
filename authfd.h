@@ -59,6 +59,9 @@
 #define SSH_COM_AGENT2_FAILURE			102
 
 #define	SSH_AGENT_OLD_SIGNATURE			0x01
+/* RFC 9987 section 8.3: request rsa-sha2-256 / rsa-sha2-512 signatures for ssh-rsa keys. */
+#define	SSH_AGENT_RSA_SHA2_256			0x02
+#define	SSH_AGENT_RSA_SHA2_512			0x04
 
 typedef struct {
 	int	fd;
