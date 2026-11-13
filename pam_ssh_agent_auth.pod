@@ -80,17 +80,10 @@ fixed PATH; it does not inherit the caller's environment.
 
 A flag which enables verbose logging
 
-=item sudo_service_name=<service name you compiled sudo to use> 
-
-(when compiled with --enable-sudo-hack)
-
-Specify the service name to use to identify the service "sudo". When the PAM_SERVICE identifier matches this 
-string, and if PAM_RUSER is not set, pam_ssh_agent_auth will attempt to identify the calling user from the 
-environment variable SUDO_USER. 
-
-This defaults to "sudo".
-
 =back
+
+The calling user is taken from PAM_RUSER, which sudo sets. If PAM_RUSER is not set, authentication fails,
+except for the sshd service, where the key sshd reports in SSH_AUTH_INFO_0 is checked for PAM_USER.
 
 =head1 EXPANSIONS
 
