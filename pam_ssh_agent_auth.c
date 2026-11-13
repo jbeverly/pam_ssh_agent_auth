@@ -66,6 +66,7 @@ char           *authorized_keys_file = NULL;
 uint8_t         allow_user_owned_authorized_keys_file = 0;
 char           *authorized_keys_command = NULL;
 char           *authorized_keys_command_user = NULL;
+extern uid_t    authorized_keys_file_allowed_owner_uid;
 
 #if ! HAVE___PROGNAME || HAVE_BUNDLE
 char           *__progname;
@@ -94,8 +95,21 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     facility = SYSLOG_FACILITY_AUTHPRIV;
 #endif
 
+    int             sshd_service = 0;
+    int             sshd_only = 0;
+
     UNUSED(flags);
-    pam_get_item(pamh, PAM_SERVICE, (void *) &servicename);
+
+    /* Options are per call: clear anything a previous call in this process left behind. */
+    authorized_keys_file = NULL;
+    allow_user_owned_authorized_keys_file = 0;
+    authorized_keys_command = NULL;
+    authorized_keys_command_user = NULL;
+    authorized_keys_file_allowed_owner_uid = 0;
+
+    if(pam_get_item(pamh, PAM_SERVICE, (const void **) &servicename) != PAM_SUCCESS || servicename == NULL)
+        return PAM_AUTH_ERR;
+    sshd_service = (strncasecmp(servicename, sshd_service_name, sizeof(sshd_service_name) - 1) == 0);
 /*
  * XXX:
  * When testing on MacOS (and I presume them same would be true on other a.out systems)
@@ -127,13 +141,32 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     }
 
     pamsshagentauth_log_init(__progname, log_lvl, facility, 0);
-    pam_get_item(pamh, PAM_USER, (void *) &user);
-    pam_get_item(pamh, PAM_RUSER, (void *) &ruser_ptr);
+    if(pam_get_item(pamh, PAM_USER, (const void **) &user) != PAM_SUCCESS || user == NULL || *user == '\0') {
+        pamsshagentauth_verbose("PAM_USER is not set; refusing authentication");
+        goto cleanexit;
+    }
+    if(pam_get_item(pamh, PAM_RUSER, (const void **) &ruser_ptr) != PAM_SUCCESS)
+        ruser_ptr = NULL;
 
     pamsshagentauth_verbose("Beginning pam_ssh_agent_auth for user %s", user);
 
-    if(ruser_ptr) {
+    if(ruser_ptr && *ruser_ptr) {
+        if(strlen(ruser_ptr) >= sizeof(ruser)) {
+            pamsshagentauth_logerror("PAM_RUSER is too long; refusing authentication");
+            goto cleanexit;
+        }
         strncpy(ruser, ruser_ptr, sizeof(ruser) - 1);
+    } else if(sshd_service) {
+        /*
+         * sshd does not set PAM_RUSER. The key it reports in SSH_AUTH_INFO_0 was used to log in
+         * as PAM_USER, so that is the user whose keys are checked. No agent is consulted.
+         */
+        if(strlen(user) >= sizeof(ruser)) {
+            pamsshagentauth_logerror("PAM_USER is too long; refusing authentication");
+            goto cleanexit;
+        }
+        strncpy(ruser, user, sizeof(ruser) - 1);
+        sshd_only = 1;
     } else {
         /*
          * PAM_RUSER is the only source for the caller's name. The SUDO_USER environment
@@ -175,14 +208,18 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
          * Attempt to read data from the sshd if we're being called as an auth agent.
          */
         const char* ssh_user_auth = pam_getenv(pamh, "SSH_AUTH_INFO_0");
-        int sshd_service = strncasecmp(servicename, sshd_service_name, sizeof(sshd_service_name) - 1);
-        if (sshd_service == 0 && ssh_user_auth != NULL) {
+        if (sshd_service && ssh_user_auth != NULL) {
             pamsshagentauth_verbose("Got SSH_AUTH_INFO_0: `%.20s...'", ssh_user_auth);
             if (userauth_pubkey_from_pam(ruser, ssh_user_auth) > 0) {
                 retval = PAM_SUCCESS;
                 pamsshagentauth_logit("Authenticated (sshd): `%s' as `%s' using %s", ruser, user, authorized_keys_file);
                 goto cleanexit;
             }
+        }
+
+        if (sshd_only) {
+            pamsshagentauth_logit("Failed Authentication (sshd): `%s' using %s", user, authorized_keys_file);
+            goto cleanexit;
         }
 
         /*
