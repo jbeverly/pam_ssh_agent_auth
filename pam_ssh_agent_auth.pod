@@ -61,8 +61,9 @@ Specify the path to the authorized_keys file(s) you would like to use for authen
 
 =item allow_user_owned_authorized_keys_file
 
-A flag which enables authorized_keys files to be owned by the invoking user, instead of root. This flag is enabled automatically whenever
-the expansions %h or ~ are used.
+Not supported. If this option is present, authentication is refused: a user who can rewrite the authorized_keys
+file can authorize any key. Files reached through the expansions ~ and %h may still be owned by that user (see
+EXPANSIONS).
 
 =item authorized_keys_command=<path to executable>
 
@@ -97,11 +98,11 @@ This defaults to "sudo".
 
 =item ~  -- same as in shells, a user's Home directory
 
-Automatically enables allow_user_owned_authorized_keys_file if used in the context of ~/. If used as ~user/, it would expect the file to be owned by 'user', unless you explicitly set allow_user_owned_authorized_keys_file
+Used as ~/, the file may be owned by the target user. Used as ~user/, the file must be owned by 'user'.
 
 =item %h -- User's Home directory
 
-Automatically enables allow_user_owned_authorized_keys_file
+The file may be owned by the target user.
 
 =item %H -- The short-hostname
 
@@ -127,23 +128,14 @@ Same as above.
 
 =item C<auth sufficient pam_ssh_agent_auth.so file=~fred/.ssh/authorized_keys>
 
-If the home-directory of user 'fred' was /home/fred, this would expand to /home/fred/.ssh/authorized_keys.
-In this case, we have not specified allow_user_owned_authorized_keys_file, 
-so this file must be owned by 'fred'.
-
-=item C<auth sufficient pam_ssh_agent_auth.so file=/secure/%H/%u/authorized_keys allow_user_owned_authorized_keys_file>
-
-On a host named foobar.baz.com, and a user named fred,
-would expand to /secure/foobar/fred/authorized_keys.
-In this case, we specified allow_user_owned_authorized_keys_file, 
-so fred would be able to manage that authorized_keys file himself. 
+If the home-directory of user 'fred' was /home/fred, this would expand to /home/fred/.ssh/authorized_keys,
+and this file must be owned by 'fred'.
 
 =item C<auth sufficient pam_ssh_agent_auth.so file=/secure/%f/%u/authorized_keys>
 
-On a host named foobar.baz.com, and a user named fred, 
-would expand to /secure/foobar.baz.com/fred/authorized_keys.
-In this case, we have not specified allow_user_owned_authorized_keys_file, 
-so this file must be owned by root.
+On a host named foobar.baz.com, and a user named fred,
+would expand to /secure/foobar.baz.com/fred/authorized_keys,
+and this file must be owned by root.
 
 =item C<auth [success=3 default=ignore] pam_ssh_agent_auth.so file=~/.ssh/authorized_keys debug>
 

@@ -86,7 +86,6 @@ extern char *authorized_keys_command;
 
 extern char *authorized_keys_command_user;
 
-extern uint8_t allow_user_owned_authorized_keys_file;
 
 uid_t authorized_keys_file_allowed_owner_uid;
 
@@ -121,9 +120,6 @@ parse_authorized_key_file(const char *user,
      */
     strncat(auth_keys_file_buf, authorized_keys_file_input,
             sizeof(auth_keys_file_buf) - 1);
-
-    if(allow_user_owned_authorized_keys_file)
-        authorized_keys_file_allowed_owner_uid = user_uid;
 
     if(*auth_keys_file_buf == '~') {
         if(*(auth_keys_file_buf + 1) == '/') {

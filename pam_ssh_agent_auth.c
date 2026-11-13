@@ -63,7 +63,6 @@
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
 char           *authorized_keys_file = NULL;
-uint8_t         allow_user_owned_authorized_keys_file = 0;
 char           *authorized_keys_command = NULL;
 char           *authorized_keys_command_user = NULL;
 extern uid_t    authorized_keys_file_allowed_owner_uid;
@@ -97,12 +96,12 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
 
     int             sshd_service = 0;
     int             sshd_only = 0;
+    const char     *refused_option = NULL;
 
     UNUSED(flags);
 
     /* Options are per call: clear anything a previous call in this process left behind. */
     authorized_keys_file = NULL;
-    allow_user_owned_authorized_keys_file = 0;
     authorized_keys_command = NULL;
     authorized_keys_command_user = NULL;
     authorized_keys_file_allowed_owner_uid = 0;
@@ -127,7 +126,7 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
             log_lvl = SYSLOG_LEVEL_DEBUG3;
         }
         if(strncasecmp_literal(*argv_ptr, "allow_user_owned_authorized_keys_file")  == 0) {
-            allow_user_owned_authorized_keys_file = 1;
+            refused_option = "allow_user_owned_authorized_keys_file";
         }
         if(strncasecmp_literal(*argv_ptr, "file=") == 0 ) {
             authorized_keys_file_input = *argv_ptr + sizeof("file=") - 1;
@@ -141,6 +140,11 @@ pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc, const char **argv)
     }
 
     pamsshagentauth_log_init(__progname, log_lvl, facility, 0);
+    if(refused_option != NULL) {
+        /* A user who can rewrite the key file could authorize any key, so this option is refused. */
+        pamsshagentauth_logerror("option %s is not supported; refusing authentication", refused_option);
+        goto cleanexit;
+    }
     if(pam_get_item(pamh, PAM_USER, (const void **) &user) != PAM_SUCCESS || user == NULL || *user == '\0') {
         pamsshagentauth_verbose("PAM_USER is not set; refusing authentication");
         goto cleanexit;
