@@ -287,6 +287,9 @@ pamsshagentauth_key_fingerprint_raw(const Key *k, enum fp_type dgst_type,
 	case SSH_FP_SHA1:
 		md = EVP_sha1();
 		break;
+	case SSH_FP_SHA256:
+		md = EVP_sha256();
+		break;
 	default:
 		pamsshagentauth_fatal("key_fingerprint_raw: bad digest type %d",
 		    dgst_type);
