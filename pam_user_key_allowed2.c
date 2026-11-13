@@ -57,6 +57,13 @@
 
 #include "identity.h"
 
+#ifndef O_NOFOLLOW
+#define O_NOFOLLOW 0
+#endif
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+
 /* return 1 if user allows given key */
 /* Modified slightly from original found in auth2-pubkey.c */
 static int
@@ -124,6 +131,7 @@ int
 pamsshagentauth_user_key_allowed2(struct passwd *pw, Key * key, char *file)
 {
     FILE *f;
+    int fd;
     int found_key = 0;
     struct stat st;
     char buf[SSH_MAX_PUBKEY_BYTES];
@@ -133,15 +141,23 @@ pamsshagentauth_user_key_allowed2(struct passwd *pw, Key * key, char *file)
 
     pamsshagentauth_verbose("trying public key file %s", file);
 
-    /* Fail not so quietly if file does not exist */
-    if(stat(file, &st) < 0) {
-        pamsshagentauth_verbose("File not found: %s", file);
+    /*
+     * Open the file containing the authorized keys without following a final symlink and
+     * without blocking, then require a regular file: a user who controls the path must not
+     * be able to point it at another file, or at a FIFO that hangs the caller.
+     */
+    fd = open(file, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+    if(fd == -1) {
+        pamsshagentauth_verbose("Cannot open %s: %s", file, strerror(errno));
         return 0;
     }
-
-    /* Open the file containing the authorized keys. */
-    f = fopen(file, "r");
-    if(!f) {
+    if(fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+        pamsshagentauth_logit("Authentication refused: %s is not a regular file", file);
+        close(fd);
+        return 0;
+    }
+    if(fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK) == -1 || (f = fdopen(fd, "r")) == NULL) {
+        close(fd);
         return 0;
     }
 

@@ -70,6 +70,7 @@
 #include "log.h"
 #include "atomicio.h"
 #include "misc.h"
+#include "uidswap.h"
 
 static int agent_present = 0;
 
@@ -105,69 +106,87 @@ int
 ssh_get_authentication_socket(uid_t uid)
 {
 	const char *authsocket;
-	int sock;
+	int sock = -1;
 	struct sockaddr_un sunaddr;
-    struct stat sock_st;
+	struct stat sock_st;
+	struct passwd *pw;
 
 	authsocket = getenv(SSH_AUTHSOCKET_ENV_NAME);
 	if (!authsocket)
 		return -1;
+	if (strlen(authsocket) >= sizeof(sunaddr.sun_path)) {
+		pamsshagentauth_logerror("ssh-agent socket path is too long");
+		return -1;
+	}
+	if ((pw = getpwuid(uid)) == NULL) {
+		pamsshagentauth_logerror("ssh-agent socket: unknown uid %lu", (unsigned long) uid);
+		return -1;
+	}
 
-    /* Advisory only; seteuid ensures no race condition; but will only log if we see EACCES */
-    if (stat(authsocket, &sock_st) != 0) {
-        pamsshagentauth_logerror("ssh-agent socket cannot be examined");
-        return -1;
-    }
-    if(uid != 0 && sock_st.st_uid != uid) {
-        pamsshagentauth_fatal("uid %lu attempted to open an agent socket owned by uid %lu", (unsigned long) uid, (unsigned long) sock_st.st_uid);
-        return -1;
-    }
+	/*
+	 * Examine and connect to the socket as the caller: effective uid, gid and groups. The
+	 * caller then cannot probe paths it could not reach itself, nor reach a socket through
+	 * root's privileges by swapping the path between the stat and the connect.
+	 */
+	pamsshagentauth_temporarily_use_uid(pw);
 
-    /* 
-     * Ensures that the EACCES tested for below can _only_ happen if somebody 
-     * is attempting to race the stat above to bypass authentication.
-     */
-    if( (sock_st.st_mode & S_IWUSR) != S_IWUSR || (sock_st.st_mode & S_IRUSR) != S_IRUSR) {
-        pamsshagentauth_logerror("ssh-agent socket has incorrect permissions for owner");
-        return -1;
-    }
+	if (stat(authsocket, &sock_st) != 0) {
+		pamsshagentauth_logerror("ssh-agent socket cannot be examined");
+		goto out;
+	}
+	if (uid != 0 && sock_st.st_uid != uid) {
+		pamsshagentauth_logerror("uid %lu attempted to open an agent socket owned by uid %lu",
+		    (unsigned long) uid, (unsigned long) sock_st.st_uid);
+		goto out;
+	}
+	if (!S_ISSOCK(sock_st.st_mode) ||
+	    (sock_st.st_mode & S_IWUSR) != S_IWUSR || (sock_st.st_mode & S_IRUSR) != S_IRUSR) {
+		pamsshagentauth_logerror("ssh-agent socket is not a socket or has incorrect permissions for owner");
+		goto out;
+	}
 
 	sunaddr.sun_family = AF_UNIX;
 	pamsshagentauth_strlcpy(sunaddr.sun_path, authsocket, sizeof(sunaddr.sun_path));
 
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock < 0)
-		return -1;
+		goto out;
 
 	/* close on exec */
 	if (fcntl(sock, F_SETFD, 1) == -1) {
 		close(sock);
-		return -1;
+		sock = -1;
+		goto out;
 	}
 
-    errno = 0; 
-    /* To ensure a race condition is not used to circumvent the stat
-       above, we will temporarily drop UID to the caller */
-    if (seteuid(uid) < 0) {
-        close(sock);
-        return -1;
-    }
-
+	errno = 0;
 	if (connect(sock, (struct sockaddr *)&sunaddr, sizeof sunaddr) < 0) {
+		if (errno == EACCES)
+			pamsshagentauth_logerror("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
 		close(sock);
-        if(errno == EACCES)
-            pamsshagentauth_fatal("MAJOR SECURITY WARNING: uid %lu made a deliberate and malicious attempt to open an agent socket owned by another user", (unsigned long) uid);
-		/* Restore the effective uid before giving up, as the success path does. */
-		if (seteuid(0) < 0)
-			pamsshagentauth_fatal("unable to restore effective uid after failed connect");
-		return -1;
+		sock = -1;
+		goto out;
 	}
 
-    /* we now continue the regularly scheduled programming */
-    if (seteuid(0) < 0)
-        pamsshagentauth_fatal("unable to restore effective uid after successful connect");
+#ifdef SO_PEERCRED
+	/* The agent at the other end must be running as the caller (or the caller is root). */
+	{
+		struct ucred cred;
+		socklen_t credlen = sizeof(cred);
+
+		if (getsockopt(sock, SOL_SOCKET, SO_PEERCRED, &cred, &credlen) != 0 ||
+		    (uid != 0 && cred.uid != uid)) {
+			pamsshagentauth_logerror("ssh-agent socket peer is not uid %lu", (unsigned long) uid);
+			close(sock);
+			sock = -1;
+			goto out;
+		}
+	}
+#endif
 
 	agent_present = 1;
+out:
+	pamsshagentauth_restore_uid();
 	return sock;
 }
 
